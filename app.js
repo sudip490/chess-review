@@ -314,19 +314,39 @@ function setStatus(s) { els.status.textContent = s; }
 /* ============================================================
    Play vs a Legend (real game database)
    ============================================================ */
-function dbUrl(fen, legendColor) {
+function explorerUrl(src, fen, color) {
   const f = encodeURIComponent(fen);
-  if (currentLegend.source === "player") {
-    const c = legendColor === "w" ? "white" : "black";
-    return `${EXPLORER}/player?player=${encodeURIComponent(currentLegend.handle)}&color=${c}&fen=${f}&recentGames=0&moves=12`;
+  if (src.type === "player") {
+    const c = color === "w" ? "white" : "black";
+    return `${EXPLORER}/player?player=${encodeURIComponent(src.handle)}&color=${c}&fen=${f}&recentGames=0&moves=12`;
+  }
+  if (src.type === "lichess") {
+    return `${EXPLORER}/lichess?fen=${f}&moves=12&topGames=0&recentGames=0` +
+           `&speeds=blitz,rapid,classical&ratings=2200,2500`;
   }
   return `${EXPLORER}/masters?fen=${f}&moves=12&topGames=0`;
 }
 
-async function queryDb(fen, legendColor) {
-  const data = await fetchExplorer(dbUrl(fen, legendColor), 10000);
-  if (!data || !Array.isArray(data.moves) || !data.moves.length) return null;
-  return data.moves;
+// Order of databases to try so real human moves last as long as possible:
+//   their own games -> masters DB -> top-rated Lichess players -> (engine).
+function sourceChain(legend) {
+  const chain = [];
+  if (legend.source === "player") chain.push({ type: "player", handle: legend.handle, tag: "" });
+  chain.push({ type: "masters", tag: "masters DB" });
+  chain.push({ type: "lichess", tag: "top players" });
+  return chain;
+}
+
+// Try each database in turn; return the first one that has moves (+ its label).
+async function queryBestMove(fen, color, legend) {
+  for (const src of sourceChain(legend)) {
+    const timeout = src.type === "player" ? 10000 : 5000;  // player streams; others are quick
+    const data = await fetchExplorer(explorerUrl(src, fen, color), timeout);
+    if (data && Array.isArray(data.moves) && data.moves.length) {
+      return { moves: data.moves, tag: src.tag };
+    }
+  }
+  return null;
 }
 
 function gamesCount(m) { return (m.white || 0) + (m.draws || 0) + (m.black || 0); }
@@ -367,23 +387,24 @@ async function requestLegendMove() {
   engineTask = "play";                          // block the user from moving
   setPlayStatus(`${currentLegend.name} is checking their games… (a few seconds)`);
 
-  let moves = null;
-  try { moves = await queryDb(game.fen(), legendColor); } catch (e) { moves = null; }
+  let result = null;
+  try { result = await queryBestMove(game.fen(), legendColor, currentLegend); } catch (e) { result = null; }
   if (myGen !== playGen) return;                // a new game started meanwhile
 
-  if (moves && moves.length) {
-    const chosen = pickDbMove(moves);
+  if (result && result.moves.length) {
+    const chosen = pickDbMove(result.moves);
     const n = gamesCount(chosen);
     const mv = game.move(uciToMove(chosen.uci));
     engineTask = null;
     if (mv) {
       board.position(game.fen()); highlightMove(mv.from, mv.to);
-      logPlay(currentLegend.name, `${mv.san}  ·  ${n} game${n === 1 ? "" : "s"}`);
+      const tag = result.tag ? ` (${result.tag})` : "";
+      logPlay(currentLegend.name + tag, `${mv.san}  ·  ${n} game${n === 1 ? "" : "s"}`);
       syncFen();
     }
-    if (!checkGameEnd()) { setPlayStatus(`Your move — ${currentLegend.name} answered from real games.`); autoEvalBar(); }
+    if (!checkGameEnd()) { setPlayStatus("Your move — answered from a real games database."); autoEvalBar(); }
   } else {
-    setPlayStatus(`Past ${currentLegend.name}'s known games — engine plays on…`);
+    setPlayStatus(`No database games here — engine plays on…`);
     engineFallbackMove();
   }
 }
@@ -420,12 +441,13 @@ async function hint() {
   if (engineTask || game.turn() !== myColor) return;
   setPlayStatus(`Checking ${currentLegend.name}'s database…`);
 
-  const moves = await queryDb(game.fen(), myColor);
-  if (moves && moves.length) {
-    const top = moves[0];
+  const result = await queryBestMove(game.fen(), myColor, currentLegend);
+  if (result && result.moves.length) {
+    const top = result.moves[0];
     const tmp = new Chess(game.fen());
     const mv = tmp.move(uciToMove(top.uci));
-    setPlayStatus(`💡 ${currentLegend.name} played ${mv ? mv.san : top.uci} here (${gamesCount(top)} games).`);
+    const tag = result.tag ? ` (${result.tag})` : "";
+    setPlayStatus(`💡 ${currentLegend.name}${tag} played ${mv ? mv.san : top.uci} here (${gamesCount(top)} games).`);
     if (top.uci) highlightMove(top.uci.slice(0, 2), top.uci.slice(2, 4));
     return;
   }
