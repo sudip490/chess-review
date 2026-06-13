@@ -189,7 +189,7 @@ function handleBestMove(line) {
       if (mv) { board.position(game.fen()); highlightMove(mv.from, mv.to);
                 logPlay(currentLegend.name + " (engine)", mv.san); syncFen(); }
     }
-    if (!checkGameEnd()) setPlayStatus("Your move.");
+    if (!checkGameEnd()) { setPlayStatus("Your move."); autoEvalBar(); }
     return;
   }
 
@@ -204,11 +204,46 @@ function uciToMove(uci) {
   return { from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci.slice(4, 5) || "q" };
 }
 
+// Vertical win/loss bar next to the board. scoreCp is from White's view.
+function updateEvalBar(scoreCp, mateText) {
+  const fill = $("eval-bar-v-fill");
+  const label = $("eval-bar-v-label");
+  if (!fill || !label) return;
+  const whitePct = 100 / (1 + Math.exp(-scoreCp / 400));   // white fills from bottom
+  fill.style.height = whitePct.toFixed(1) + "%";
+  let txt;
+  if (mateText) txt = mateText.replace("#", "M");
+  else if (Math.abs(scoreCp) >= 10000) txt = scoreCp > 0 ? "M" : "-M";
+  else txt = (scoreCp >= 0 ? "+" : "") + (scoreCp / 100).toFixed(1);
+  label.textContent = txt;
+  if (whitePct >= 16) {            // label sits on the white (bottom) side
+    label.style.bottom = "3px"; label.style.top = "auto";
+    label.style.color = "#1a1a1a"; label.style.textShadow = "0 0 2px rgba(255,255,255,.6)";
+  } else {                         // black is winning big — put it on top in light text
+    label.style.top = "3px"; label.style.bottom = "auto";
+    label.style.color = "#f0f0f0"; label.style.textShadow = "0 0 2px rgba(0,0,0,.6)";
+  }
+}
+
+// Live bar update while playing — quick cloud eval, no engine needed.
+async function autoEvalBar() {
+  const fen = game.fen();
+  const data = await fetchJson(cloudEvalUrl(fen, 1), 3500);
+  if (game.fen() !== fen) return;            // position already changed
+  if (data && data.pvs && data.pvs[0]) {
+    const pv = data.pvs[0];
+    if (pv.mate !== undefined && pv.mate !== null)
+      updateEvalBar(pv.mate > 0 ? 10000 : -10000, "#" + Math.abs(pv.mate));
+    else updateEvalBar(pv.cp, null);
+  }
+}
+
 function renderEval(info, sourceLabel) {
   els.depth.textContent = (info.depth || "—") + (sourceLabel ? " (" + sourceLabel + ")" : "");
   els.eval.textContent = info.scoreText;
   els.eval.style.color = info.scoreCp >= 0 ? "var(--good)" : "var(--bad)";
   els.evalFill.style.width = (100 / (1 + Math.exp(-info.scoreCp / 400))).toFixed(1) + "%";
+  updateEvalBar(info.scoreCp, (info.scoreText && info.scoreText.charAt(0) === "#") ? info.scoreText : null);
 
   if (info.pvUci && info.pvUci.length) {
     const tmp = new Chess(game.fen());
@@ -320,6 +355,7 @@ function newGame() {
   syncFen();
   els.bestMove.textContent = "—"; els.pv.textContent = "—";
   els.eval.textContent = "—"; els.depth.textContent = "—";
+  updateEvalBar(0, null);
 
   if (game.turn() !== myColor) requestLegendMove();
   else setPlayStatus(`Your move — ${currentLegend.name} is waiting.`);
@@ -345,7 +381,7 @@ async function requestLegendMove() {
       logPlay(currentLegend.name, `${mv.san}  ·  ${n} game${n === 1 ? "" : "s"}`);
       syncFen();
     }
-    if (!checkGameEnd()) setPlayStatus(`Your move — ${currentLegend.name} answered from real games.`);
+    if (!checkGameEnd()) { setPlayStatus(`Your move — ${currentLegend.name} answered from real games.`); autoEvalBar(); }
   } else {
     setPlayStatus(`Past ${currentLegend.name}'s known games — engine plays on…`);
     engineFallbackMove();
@@ -376,7 +412,7 @@ function playRandomMove() {
   game.move(m);
   board.position(game.fen()); highlightMove(m.from, m.to);
   logPlay(currentLegend.name + " (fallback)", m.san); syncFen();
-  if (!checkGameEnd()) setPlayStatus("Your move.");
+  if (!checkGameEnd()) { setPlayStatus("Your move."); autoEvalBar(); }
 }
 
 async function hint() {
@@ -452,6 +488,7 @@ function afterMyMove(move) {
   logPlay("You", move.san);
   syncFen();
   if (checkGameEnd()) return;
+  autoEvalBar();                 // refresh the win/loss bar with your move
   requestLegendMove();
 }
 
@@ -483,6 +520,7 @@ function syncFen() { els.fenInput.value = game.fen(); els.turnSelect.value = gam
 function afterPositionChange() {
   syncFen();
   els.bestMove.textContent = "—"; els.pv.textContent = "—";
+  updateEvalBar(0, null);
   setStatus("Ready"); clearHighlights();
 }
 

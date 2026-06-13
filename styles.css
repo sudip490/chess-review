@@ -46,9 +46,37 @@ main {
   padding: 24px 16px;
 }
 
-.board-area { width: 480px; max-width: 95vw; }
+.board-area { width: 504px; max-width: 95vw; }
+
+.board-row { display: flex; gap: 10px; align-items: stretch; }
+
+.eval-bar-v {
+  flex: 0 0 24px;
+  background: #262626;            /* black side (top) */
+  border-radius: 5px;
+  position: relative;
+  overflow: hidden;
+  min-height: 200px;
+}
+.eval-bar-v-fill {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;  /* white side grows from the bottom */
+  height: 50%;
+  background: #f4f4f4;
+  transition: height .35s ease;
+}
+.eval-bar-v-label {
+  position: absolute;
+  left: 0; right: 0; bottom: 3px;
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  text-shadow: 0 0 2px rgba(255,255,255,.6);
+}
+
 #board {
-  width: 100%;
+  flex: 1;
   box-shadow: 0 8px 24px rgba(0,0,0,.4);
   border-radius: 4px;
   /* Stop the page from scrolling/zooming while you drag a piece on touch screens */

@@ -19,7 +19,13 @@
 
   <main>
     <section class="board-area">
-      <div id="board"></div>
+      <div class="board-row">
+        <div class="eval-bar-v" id="eval-bar-v" title="Who is winning (white = bottom)">
+          <div class="eval-bar-v-fill" id="eval-bar-v-fill"></div>
+          <div class="eval-bar-v-label" id="eval-bar-v-label">0.0</div>
+        </div>
+        <div id="board"></div>
+      </div>
 
       <div class="board-controls">
         <button id="btn-analyze" class="primary">⚡ Analyze</button>
