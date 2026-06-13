@@ -473,7 +473,7 @@ function setupLegendSelect() {
 function setup() {
   board = Chessboard("board", {
     draggable: true, position: "start",
-    pieceTheme: "https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png",
+    pieceTheme: "assets/pieces/{piece}.png",
     onDragStart, onDrop, onSnapEnd,
   });
   window.addEventListener("resize", () => board.resize());
