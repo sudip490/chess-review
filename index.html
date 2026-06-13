@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess Analysis — Best Move Finder</title>
+
+  <!-- chessboard.js styles -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>♟ Chess Analysis</h1>
+    <p class="tagline">Find the best move in seconds — powered by Stockfish</p>
+  </header>
+
+  <main>
+    <section class="board-area">
+      <div id="board"></div>
+
+      <div class="board-controls">
+        <button id="btn-analyze" class="primary">⚡ Analyze</button>
+        <button id="btn-stop" disabled>■ Stop</button>
+        <button id="btn-flip">⇅ Flip</button>
+        <button id="btn-undo">↶ Undo</button>
+        <button id="btn-new">↺ New game</button>
+      </div>
+
+      <div class="row">
+        <label>Side to move:
+          <select id="turn-select">
+            <option value="w">White</option>
+            <option value="b">Black</option>
+          </select>
+        </label>
+        <label>Thinking time:
+          <select id="time-select">
+            <option value="1000">1 sec</option>
+            <option value="3000" selected>3 sec</option>
+            <option value="5000">5 sec</option>
+            <option value="10000">10 sec</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="fen-row">
+        <input id="fen-input" type="text" placeholder="Paste a FEN position here..." />
+        <button id="btn-load">Load</button>
+        <button id="btn-copy">Copy FEN</button>
+      </div>
+    </section>
+
+    <section class="analysis-area">
+      <h2>Analysis</h2>
+
+      <div class="best-move-box">
+        <div class="label">Best move</div>
+        <div id="best-move" class="best-move">—</div>
+      </div>
+
+      <div class="eval-box">
+        <div class="label">Evaluation</div>
+        <div id="eval" class="eval">—</div>
+        <div class="eval-bar"><div id="eval-fill"></div></div>
+      </div>
+
+      <div class="info-grid">
+        <div><span class="label">Depth</span><span id="depth">—</span></div>
+        <div><span class="label">Status</span><span id="status">Idle</span></div>
+      </div>
+
+      <div class="pv-box">
+        <div class="label">Best line (principal variation)</div>
+        <div id="pv" class="pv">—</div>
+      </div>
+    </section>
+
+    <section class="play-area">
+      <h2>🧠 Play vs a Legend</h2>
+      <p class="muted-small">Make your move — the legend answers in their place.</p>
+
+      <label class="full">Opponent
+        <select id="legend-select"></select>
+      </label>
+      <div id="legend-style" class="game-meta">Pick a legend and start a game.</div>
+
+      <label class="full">You play
+        <select id="color-select">
+          <option value="w">White</option>
+          <option value="b">Black</option>
+        </select>
+      </label>
+
+      <button id="btn-newgame" class="primary full">♟ New Game</button>
+      <button id="btn-hint" class="full">💡 What would they play? (hint)</button>
+
+      <div id="play-status" class="play-status">Choose an opponent and start.</div>
+      <div id="play-log" class="move-list"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Play vs Legend uses real games from the <a href="https://lichess.org" target="_blank" rel="noopener">Lichess</a> database ·
+       Analysis uses Lichess cloud Stockfish · Local Stockfish is the offline fallback.</p>
+  </footer>
+
+  <!-- libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
