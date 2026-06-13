@@ -47,7 +47,17 @@ main {
 }
 
 .board-area { width: 480px; max-width: 95vw; }
-#board { width: 100%; box-shadow: 0 8px 24px rgba(0,0,0,.4); border-radius: 4px; }
+#board {
+  width: 100%;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  border-radius: 4px;
+  /* Stop the page from scrolling/zooming while you drag a piece on touch screens */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+#board img { -webkit-user-drag: none; user-drag: none; }
 
 .board-controls {
   display: flex;
