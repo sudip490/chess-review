@@ -508,7 +508,33 @@ function setup() {
   setupLegendSelect();
   setStatus("Ready");
   setPlayStatus("Pick a legend and press New Game.");
+  loadVisitorCount();
   initEngine();                                 // warms up quietly for offline fallback
+}
+
+/* ---------- Visitor counter (free, no backend) ---------- */
+const VISIT_BASE = "https://abacus.jasoncameron.dev";
+const VISIT_NS = "chess-review-sudip490";
+const VISIT_KEY = "visits";
+
+function loadVisitorCount() {
+  const el = $("visitor-count");
+  if (!el) return;
+  // Count each browser once (unique-ish visitors); just read the total afterwards.
+  const seen = localStorage.getItem("cr_visited");
+  const url = seen ? `${VISIT_BASE}/get/${VISIT_NS}/${VISIT_KEY}`
+                   : `${VISIT_BASE}/hit/${VISIT_NS}/${VISIT_KEY}`;
+  fetch(url)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => {
+      if (d && typeof d.value === "number") {
+        el.textContent = "👁 " + d.value.toLocaleString() + " visitors";
+        if (!seen) localStorage.setItem("cr_visited", "1");
+      } else {
+        el.style.display = "none";
+      }
+    })
+    .catch(() => { el.style.display = "none"; });
 }
 
 window.addEventListener("DOMContentLoaded", setup);

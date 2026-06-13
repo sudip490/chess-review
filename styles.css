@@ -25,6 +25,18 @@ header {
 header h1 { margin: 0; font-size: 2rem; }
 .tagline { color: var(--muted); margin: 4px 0 0; }
 
+.visitor {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 5px 14px;
+  background: var(--panel);
+  border: 1px solid #444c63;
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 main {
   display: flex;
   gap: 24px;
