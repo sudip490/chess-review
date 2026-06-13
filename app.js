@@ -60,23 +60,43 @@ async function fetchJson(url, timeoutMs) {
   } catch (e) { clearTimeout(t); return null; }
 }
 
-// The Lichess opening explorer may answer with a single JSON object OR stream
-// NDJSON (one object per line, the last being the final result — the player
-// index is built on demand). Read it all and return the last valid object.
+// The Lichess opening explorer STREAMS NDJSON — it sends progressively-refined
+// results while it indexes (the full stream can take minutes). The very first
+// line already carries a usable answer, so we read incrementally and return as
+// soon as we see a result that has moves, then abort the rest. This turns a
+// ~160s wait into ~1-2s.
 async function fetchExplorer(url, timeoutMs) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const r = await fetch(url, { signal: ctrl.signal });
-    clearTimeout(t);
-    if (!r.ok) return null;
-    const text = (await r.text()).trim();
-    if (!text) return null;
-    const lines = text.split(/\r?\n+/).filter(Boolean);
-    for (let i = lines.length - 1; i >= 0; i--) {
-      try { return JSON.parse(lines[i]); } catch (e) { /* keep scanning back */ }
+    if (!r.ok || !r.body) { clearTimeout(t); return null; }
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "", last = null;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop();                       // keep the partial last line
+      for (const line of lines) {
+        const s = line.trim();
+        if (!s) continue;
+        try {
+          const obj = JSON.parse(s);
+          last = obj;
+          if (obj && Array.isArray(obj.moves) && obj.moves.length) {
+            clearTimeout(t);
+            try { ctrl.abort(); } catch (e) {}  // stop the long stream early
+            return obj;
+          }
+        } catch (e) { /* partial/invalid line, keep going */ }
+      }
     }
-    return null;
+    clearTimeout(t);
+    if (buf.trim()) { try { last = JSON.parse(buf.trim()); } catch (e) {} }
+    return last;
   } catch (e) { clearTimeout(t); return null; }
 }
 
@@ -269,7 +289,7 @@ function dbUrl(fen, legendColor) {
 }
 
 async function queryDb(fen, legendColor) {
-  const data = await fetchExplorer(dbUrl(fen, legendColor), 9000);
+  const data = await fetchExplorer(dbUrl(fen, legendColor), 10000);
   if (!data || !Array.isArray(data.moves) || !data.moves.length) return null;
   return data.moves;
 }
@@ -309,7 +329,7 @@ async function requestLegendMove() {
   const myGen = playGen;
   const legendColor = (myColor === "w") ? "b" : "w";
   engineTask = "play";                          // block the user from moving
-  setPlayStatus(`${currentLegend.name} is consulting the database…`);
+  setPlayStatus(`${currentLegend.name} is checking their games… (a few seconds)`);
 
   let moves = null;
   try { moves = await queryDb(game.fen(), legendColor); } catch (e) { moves = null; }
@@ -332,13 +352,31 @@ async function requestLegendMove() {
   }
 }
 
-function engineFallbackMove() {
-  if (!enginePrimed) { setPlayStatus("Loading engine for continuation…"); setTimeout(engineFallbackMove, 300); return; }
+function engineFallbackMove(tries) {
+  tries = tries || 0;
+  if (!enginePrimed) {
+    if (tries > 12) { playRandomMove(); return; }   // never stall (~3.6s cap)
+    setPlayStatus(`${currentLegend.name} is choosing a move…`);
+    setTimeout(() => engineFallbackMove(tries + 1), 300);
+    return;
+  }
   engineTask = "play";
   setSkill(currentLegend.skill || 20);
   send("position fen " + game.fen());
   send("go movetime 1000");
   armWatchdog(5000);
+}
+
+// Absolute last resort so the game can always continue.
+function playRandomMove() {
+  engineTask = null;
+  const moves = game.moves({ verbose: true });
+  if (!moves.length) { checkGameEnd(); return; }
+  const m = moves[Math.floor(Math.random() * moves.length)];
+  game.move(m);
+  board.position(game.fen()); highlightMove(m.from, m.to);
+  logPlay(currentLegend.name + " (fallback)", m.san); syncFen();
+  if (!checkGameEnd()) setPlayStatus("Your move.");
 }
 
 async function hint() {
