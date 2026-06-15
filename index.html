@@ -9,19 +9,34 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,500;1,600&display=swap" />
 
   <!-- chessboard.js styles -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" />
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 </head>
 <body>
-  <header>
-    <button id="theme-toggle" class="theme-toggle" title="Toggle light / dark theme" aria-label="Toggle theme">🌙</button>
-    <h1>♟ Chess Analysis</h1>
+  <nav class="topnav">
+    <div class="brand">
+      <span class="brand-logo">♟</span>
+      <span class="brand-text">
+        <span class="brand-name">CHESS<b>REVIEW</b></span>
+        <span class="brand-sub">EDITORIAL STUDIO</span>
+      </span>
+    </div>
+    <div class="nav-right">
+      <span id="visitor-count" class="visitor" title="Total visitors">👁 … visitors</span>
+      <span class="engine-pill"><span class="dot"></span> Stockfish Active</span>
+      <button id="theme-toggle" class="theme-toggle" title="Toggle light / dark theme" aria-label="Toggle theme">🌙</button>
+      <button id="nav-analyze" class="nav-cta primary">⚡ Analyze Position</button>
+    </div>
+  </nav>
+
+  <header class="page-head">
+    <span class="eyebrow">Grandmaster-grade engine review</span>
+    <h1>The Art of the Best Move</h1>
     <p class="tagline">Find the best move in seconds — powered by Stockfish</p>
-    <div id="visitor-count" class="visitor" title="Total visitors">👁 … visitors</div>
   </header>
 
   <main>
@@ -91,8 +106,8 @@
         <div id="best-move" class="best-move">—</div>
       </div>
 
-      <div class="eval-box">
-        <div class="label">Evaluation</div>
+      <div class="eval-box feature">
+        <div class="label">Position Evaluation</div>
         <div id="eval" class="eval">—</div>
         <div class="eval-bar"><div id="eval-fill"></div></div>
       </div>
@@ -190,6 +205,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

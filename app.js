@@ -602,6 +602,11 @@ function setup() {
 
   els.analyzeBtn.addEventListener("click", analyze);
   els.stopBtn.addEventListener("click", stopAnalysis);
+  const navAnalyze = $("nav-analyze");
+  if (navAnalyze) navAnalyze.addEventListener("click", () => {
+    document.querySelector(".board-area")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    analyze();
+  });
 
   // Game-review controls
   $("rv-first").addEventListener("click", () => gotoPly(0));
