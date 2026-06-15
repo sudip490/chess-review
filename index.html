@@ -108,6 +108,33 @@
     </section>
   </main>
 
+  <section class="insights-area">
+    <h2>📊 Chess.com Insights</h2>
+    <p class="muted-small">Type any Chess.com username to see their recent games and an overview.</p>
+
+    <div class="insights-search">
+      <input id="cc-username" type="text" placeholder="Chess.com username (e.g. hikaru)" autocomplete="off" />
+      <select id="cc-months" title="How many months of games to load">
+        <option value="1">Last 1 month</option>
+        <option value="3" selected>Last 3 months</option>
+        <option value="6">Last 6 months</option>
+        <option value="12">Last 12 months</option>
+      </select>
+      <button id="cc-go" class="primary">Get games</button>
+    </div>
+
+    <div id="cc-status" class="cc-status"></div>
+
+    <div id="cc-profile" class="cc-profile" hidden></div>
+    <div id="cc-ratings" class="cc-ratings" hidden></div>
+    <div id="cc-overview" class="cc-overview" hidden></div>
+    <div id="cc-games-wrap" hidden>
+      <h3 class="cc-h3">Recent games <span id="cc-games-count" class="cc-muted"></span></h3>
+      <div id="cc-games" class="cc-games"></div>
+      <button id="cc-more" class="full" hidden>Load more</button>
+    </div>
+  </section>
+
   <footer>
     <p>♟ Chess Analysis — play, analyze, and improve.</p>
   </footer>

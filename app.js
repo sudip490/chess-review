@@ -607,6 +607,7 @@ function setup() {
   setStatus("Ready");
   setPlayStatus("Pick a legend and press New Game.");
   loadVisitorCount();
+  setupInsights();
   initEngine();                                 // warms up quietly for offline fallback
 }
 
@@ -633,6 +634,298 @@ function loadVisitorCount() {
       }
     })
     .catch(() => { el.style.display = "none"; });
+}
+
+/* ============================================================
+   Chess.com Insights — type a username, get recent games + overview
+   Uses the free Chess.com Published-Data API (no key, CORS-enabled):
+     /pub/player/{user}            -> profile
+     /pub/player/{user}/stats      -> current ratings
+     /pub/player/{user}/games/archives           -> monthly archive URLs
+     /pub/player/{user}/games/{YYYY}/{MM}         -> games for that month
+   ============================================================ */
+const CC_API = "https://api.chess.com/pub";
+
+let ccGames = [];          // all loaded games (normalized), newest first
+let ccShown = 0;           // how many of ccGames are currently rendered
+const CC_PAGE = 25;
+
+function setupInsights() {
+  const goBtn = $("cc-go");
+  const input = $("cc-username");
+  if (!goBtn || !input) return;
+  goBtn.addEventListener("click", runInsights);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") runInsights(); });
+  $("cc-more").addEventListener("click", () => renderGames(ccShown + CC_PAGE));
+}
+
+function ccSetStatus(msg, isError) {
+  const el = $("cc-status");
+  el.textContent = msg || "";
+  el.classList.toggle("error", !!isError);
+}
+
+async function ccFetch(url) {
+  try {
+    const r = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { return null; }
+}
+
+async function runInsights() {
+  const raw = $("cc-username").value.trim().toLowerCase().replace(/^@/, "");
+  if (!raw) { ccSetStatus("Enter a username first.", true); return; }
+  const months = parseInt($("cc-months").value, 10) || 3;
+
+  // reset UI
+  ["cc-profile", "cc-ratings", "cc-overview", "cc-games-wrap"].forEach((id) => ($(id).hidden = true));
+  ccGames = []; ccShown = 0;
+  $("cc-go").disabled = true;
+  ccSetStatus(`Looking up “${raw}”…`);
+
+  const profile = await ccFetch(`${CC_API}/player/${encodeURIComponent(raw)}`);
+  if (!profile || !profile.username) {
+    ccSetStatus(`No Chess.com player found for “${raw}”.`, true);
+    $("cc-go").disabled = false;
+    return;
+  }
+
+  const [stats, archives] = await Promise.all([
+    ccFetch(`${CC_API}/player/${encodeURIComponent(raw)}/stats`),
+    ccFetch(`${CC_API}/player/${encodeURIComponent(raw)}/games/archives`),
+  ]);
+
+  renderProfile(profile);
+  if (stats) renderRatings(stats);
+
+  // Load the most recent N monthly archives.
+  const list = (archives && Array.isArray(archives.archives)) ? archives.archives.slice(-months) : [];
+  if (!list.length) {
+    ccSetStatus("This player has no public games on record.", false);
+    $("cc-go").disabled = false;
+    return;
+  }
+  ccSetStatus(`Loading games from the last ${list.length} month(s)…`);
+
+  const monthly = await Promise.all(list.reverse().map((u) => ccFetch(u)));
+  const all = [];
+  for (const m of monthly) if (m && Array.isArray(m.games)) all.push(...m.games);
+
+  ccGames = all
+    .map((g) => normalizeGame(g, raw))
+    .filter(Boolean)
+    .sort((a, b) => b.endTime - a.endTime);
+
+  if (!ccGames.length) {
+    ccSetStatus("No standard games found in that range.", false);
+    $("cc-go").disabled = false;
+    return;
+  }
+
+  ccSetStatus(`Loaded ${ccGames.length} games for ${profile.username}.`);
+  renderOverview(ccGames, raw);
+  $("cc-games-count").textContent = `(${ccGames.length})`;
+  $("cc-games-wrap").hidden = false;
+  renderGames(CC_PAGE);
+  $("cc-go").disabled = false;
+}
+
+/* ---------- Normalize a Chess.com game into what we need ---------- */
+function normalizeGame(g, user) {
+  if (!g || !g.white || !g.black) return null;
+  if (g.rules && g.rules !== "chess") return null;   // skip variants (chess960, bughouse, …)
+  const meIsWhite = (g.white.username || "").toLowerCase() === user;
+  const me = meIsWhite ? g.white : g.black;
+  const opp = meIsWhite ? g.black : g.white;
+  if (!me || !opp) return null;
+
+  let outcome, reason;
+  if (me.result === "win") { outcome = "win"; reason = "won"; }
+  else if (["agreed", "repetition", "stalemate", "insufficient", "50move", "timevsinsufficient"].includes(me.result)) {
+    outcome = "draw"; reason = me.result;
+  } else { outcome = "loss"; reason = me.result; }
+
+  return {
+    outcome, reason,
+    color: meIsWhite ? "white" : "black",
+    myRating: me.rating || 0,
+    oppName: opp.username || "?",
+    oppRating: opp.rating || 0,
+    timeClass: g.time_class || "—",
+    url: g.url || null,
+    endTime: (g.end_time || 0) * 1000,
+    opening: openingFromPgn(g.pgn),
+  };
+}
+
+function openingFromPgn(pgn) {
+  if (!pgn) return null;
+  const m = pgn.match(/\[ECOUrl "https:\/\/www\.chess\.com\/openings\/([^"]+)"\]/);
+  if (m) {
+    let slug = decodeURIComponent(m[1]);
+    slug = slug.split("...")[0];          // drop the "...moves" tail
+    slug = slug.replace(/-\d+\..*$/, ""); // drop "-3.Nf3…" move-number tails
+    slug = slug.replace(/-?\d+(\.\d+)?$/, ""); // drop a trailing variation number
+    return slug.replace(/-/g, " ").trim();
+  }
+  const eco = pgn.match(/\[ECO "([^"]+)"\]/);
+  return eco ? eco[1] : null;
+}
+
+/* ---------- Rendering ---------- */
+function renderProfile(p) {
+  const el = $("cc-profile");
+  const avatar = p.avatar || "https://www.chess.com/bundles/web/images/user-image.007dad08.svg";
+  const bits = [];
+  if (p.title) bits.push(`<strong style="color:var(--good)">${p.title}</strong>`);
+  if (p.country) bits.push(p.country.split("/").pop());
+  if (typeof p.followers === "number") bits.push(`${p.followers.toLocaleString()} followers`);
+  if (p.joined) bits.push("Joined " + new Date(p.joined * 1000).getFullYear());
+  if (p.last_online) bits.push("Last online " + new Date(p.last_online * 1000).toLocaleDateString());
+
+  el.innerHTML =
+    `<img src="${avatar}" alt="" onerror="this.style.display='none'" />` +
+    `<div>` +
+    `<div class="name"><a href="${p.url}" target="_blank" rel="noopener">${p.username}</a></div>` +
+    `<div class="meta">${bits.join(" · ") || "—"}</div>` +
+    `</div>`;
+  el.hidden = false;
+}
+
+function renderRatings(stats) {
+  const el = $("cc-ratings");
+  const cards = [];
+  const add = (label, obj) => {
+    if (obj && obj.last && obj.last.rating) {
+      const rec = obj.record || {};
+      const sub = (rec.win != null) ? `${rec.win}W ${rec.loss || 0}L ${rec.draw || 0}D` : "";
+      cards.push(`<div class="cc-rating-card"><div class="rc-label">${label}</div>` +
+                 `<div class="rc-value">${obj.last.rating}</div>` +
+                 `<div class="rc-sub">${sub}</div></div>`);
+    }
+  };
+  add("Bullet", stats.chess_bullet);
+  add("Blitz", stats.chess_blitz);
+  add("Rapid", stats.chess_rapid);
+  add("Daily", stats.chess_daily);
+  if (stats.tactics && stats.tactics.highest)
+    cards.push(`<div class="cc-rating-card"><div class="rc-label">Puzzles (best)</div>` +
+               `<div class="rc-value">${stats.tactics.highest.rating}</div><div class="rc-sub"></div></div>`);
+
+  if (!cards.length) { el.hidden = true; return; }
+  el.innerHTML = cards.join("");
+  el.hidden = false;
+}
+
+function pct(n, total) { return total ? Math.round((n / total) * 100) : 0; }
+
+function renderOverview(games, user) {
+  const el = $("cc-overview");
+  const total = games.length;
+  let w = 0, l = 0, d = 0;
+  const byColor = { white: { w: 0, t: 0 }, black: { w: 0, t: 0 } };
+  const byClass = {};
+  const openings = {};
+  const lossReasons = {};
+
+  for (const g of games) {
+    if (g.outcome === "win") w++; else if (g.outcome === "loss") l++; else d++;
+    byColor[g.color].t++;
+    if (g.outcome === "win") byColor[g.color].w++;
+    const c = g.timeClass;
+    byClass[c] = byClass[c] || { w: 0, l: 0, d: 0, t: 0 };
+    byClass[c].t++; byClass[c][g.outcome === "win" ? "w" : g.outcome === "loss" ? "l" : "d"]++;
+    if (g.opening) openings[g.opening] = (openings[g.opening] || 0) + 1;
+    if (g.outcome === "loss") lossReasons[g.reason] = (lossReasons[g.reason] || 0) + 1;
+  }
+
+  const winRate = pct(w, total);
+  const topOpenings = Object.entries(openings).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const topClasses = Object.entries(byClass).sort((a, b) => b[1].t - a[1].t);
+  const reasonLabels = {
+    checkmated: "Checkmated", resigned: "Resigned", timeout: "Lost on time",
+    abandoned: "Abandoned", lose: "Lost", kingofthehill: "King of the hill", threecheck: "Three-check",
+  };
+  const topReasons = Object.entries(lossReasons).sort((a, b) => b[1] - a[1]);
+
+  const statRow =
+    `<div class="cc-stat-row">` +
+    `<div class="cc-stat"><div class="s-value">${total}</div><div class="s-label">Games</div></div>` +
+    `<div class="cc-stat"><div class="s-value s-win">${w}</div><div class="s-label">Wins</div></div>` +
+    `<div class="cc-stat"><div class="s-value s-draw">${d}</div><div class="s-label">Draws</div></div>` +
+    `<div class="cc-stat"><div class="s-value s-loss">${l}</div><div class="s-label">Losses</div></div>` +
+    `<div class="cc-stat"><div class="s-value">${winRate}%</div><div class="s-label">Win rate</div></div>` +
+    `</div>`;
+
+  const wdlBar =
+    `<div class="cc-wdl-bar">` +
+    `<div class="b-win" style="width:${pct(w, total)}%">${pct(w, total) >= 8 ? pct(w, total) + "%" : ""}</div>` +
+    `<div class="b-draw" style="width:${pct(d, total)}%">${pct(d, total) >= 8 ? pct(d, total) + "%" : ""}</div>` +
+    `<div class="b-loss" style="width:${pct(l, total)}%">${pct(l, total) >= 8 ? pct(l, total) + "%" : ""}</div>` +
+    `</div>`;
+
+  const colorPanel =
+    `<div class="cc-panel"><h4>By color (win rate)</h4><div class="cc-bars">` +
+    ["white", "black"].map((c) => barLine(
+      `As ${c}`, pct(byColor[c].w, byColor[c].t), `${pct(byColor[c].w, byColor[c].t)}% · ${byColor[c].t}`
+    )).join("") +
+    `</div></div>`;
+
+  const classPanel =
+    `<div class="cc-panel"><h4>By time control</h4><div class="cc-bars">` +
+    topClasses.map(([name, s]) => barLine(
+      name.charAt(0).toUpperCase() + name.slice(1), pct(s.w, s.t), `${pct(s.w, s.t)}% · ${s.t}`
+    )).join("") +
+    `</div></div>`;
+
+  const openingsPanel = topOpenings.length
+    ? `<div class="cc-panel"><h4>Most played openings</h4><div class="cc-bars">` +
+      topOpenings.map(([name, n]) => barLine(name, pct(n, total), String(n))).join("") +
+      `</div></div>`
+    : "";
+
+  const reasonsPanel = topReasons.length
+    ? `<div class="cc-panel"><h4>How losses happened</h4><div class="cc-bars">` +
+      topReasons.map(([r, n]) => barLine(reasonLabels[r] || r, pct(n, l), String(n))).join("") +
+      `</div></div>`
+    : "";
+
+  el.innerHTML =
+    statRow + wdlBar +
+    `<div class="cc-two-col">${colorPanel}${classPanel}</div>` +
+    `<div class="cc-two-col">${openingsPanel}${reasonsPanel}</div>`;
+  el.hidden = false;
+}
+
+function barLine(name, widthPct, numText) {
+  return `<div class="cc-bar-line"><span class="bl-name" title="${name}">${name}</span>` +
+         `<div class="cc-bar-track"><div style="width:${Math.max(2, widthPct)}%"></div></div>` +
+         `<span class="bl-num">${numText}</span></div>`;
+}
+
+function renderGames(count) {
+  const el = $("cc-games");
+  ccShown = Math.min(count, ccGames.length);
+  const reasonShort = {
+    won: "won", checkmated: "checkmate", resigned: "resign", timeout: "time",
+    agreed: "agreed", repetition: "repetition", stalemate: "stalemate",
+    insufficient: "insufficient", "50move": "50-move", timevsinsufficient: "time vs ins.",
+    abandoned: "abandoned",
+  };
+  el.innerHTML = ccGames.slice(0, ccShown).map((g) => {
+    const cls = g.outcome === "win" ? "s-win" : g.outcome === "loss" ? "s-loss" : "s-draw";
+    const tag = g.outcome === "win" ? "W" : g.outcome === "loss" ? "L" : "D";
+    const date = g.endTime ? new Date(g.endTime).toLocaleDateString() : "";
+    const link = g.url ? `<a class="g-link" href="${g.url}" target="_blank" rel="noopener">view ↗</a>` : "";
+    return `<div class="cc-game">` +
+      `<span class="g-result ${cls}">${tag}</span>` +
+      `<span class="g-opp">vs ${g.oppName} <span class="g-sub">(${g.oppRating || "?"})</span>` +
+      `<div class="g-reason">${g.color} · ${reasonShort[g.reason] || g.reason} · ${date}</div></span>` +
+      `<span class="g-class">${g.timeClass}</span>` +
+      `${link}</div>`;
+  }).join("");
+  $("cc-more").hidden = ccShown >= ccGames.length;
 }
 
 window.addEventListener("DOMContentLoaded", setup);

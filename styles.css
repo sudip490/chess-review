@@ -222,4 +222,105 @@ button.full { width: 100%; margin-bottom: 10px; }
 .move-list .move:hover { background: var(--panel-2); }
 .move-list .move.current { background: var(--accent); color: #0c1422; font-weight: 700; }
 
+/* ---------- Chess.com Insights ---------- */
+.insights-area {
+  max-width: 880px;
+  margin: 0 auto 24px;
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 24px;
+}
+.insights-area h2 { margin-top: 0; }
+.cc-h3 { margin: 22px 0 10px; font-size: 1.05rem; }
+.cc-muted { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+
+.insights-search { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+.insights-search input { flex: 1; min-width: 180px; }
+
+.cc-status { color: var(--muted); min-height: 18px; font-size: 0.9rem; }
+.cc-status.error { color: var(--bad); }
+
+.cc-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--panel-2);
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 14px;
+}
+.cc-profile img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; }
+.cc-profile .name { font-size: 1.2rem; font-weight: 700; }
+.cc-profile .name a { color: var(--accent); text-decoration: none; }
+.cc-profile .meta { color: var(--muted); font-size: 0.85rem; margin-top: 3px; line-height: 1.5; }
+
+.cc-ratings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.cc-rating-card {
+  background: var(--panel-2);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+.cc-rating-card .rc-label { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; }
+.cc-rating-card .rc-value { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+.cc-rating-card .rc-sub { color: var(--muted); font-size: 0.72rem; margin-top: 2px; }
+
+.cc-overview { margin-top: 18px; display: grid; gap: 16px; }
+.cc-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.cc-stat {
+  background: var(--panel-2);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+.cc-stat .s-value { font-size: 1.6rem; font-weight: 800; }
+.cc-stat .s-label { color: var(--muted); font-size: 0.75rem; margin-top: 2px; }
+.s-win { color: var(--good); }
+.s-loss { color: var(--bad); }
+.s-draw { color: var(--accent); }
+
+.cc-wdl-bar { display: flex; height: 22px; border-radius: 6px; overflow: hidden; font-size: 0.72rem; font-weight: 700; }
+.cc-wdl-bar > div { display: flex; align-items: center; justify-content: center; color: #0c1422; white-space: nowrap; }
+.cc-wdl-bar .b-win { background: var(--good); }
+.cc-wdl-bar .b-draw { background: var(--accent); }
+.cc-wdl-bar .b-loss { background: var(--bad); }
+
+.cc-panel {
+  background: var(--panel-2);
+  border-radius: 10px;
+  padding: 14px;
+}
+.cc-panel h4 { margin: 0 0 10px; font-size: 0.95rem; }
+.cc-bars { display: grid; gap: 8px; }
+.cc-bar-line { display: grid; grid-template-columns: 130px 1fr 64px; gap: 8px; align-items: center; font-size: 0.82rem; }
+.cc-bar-line .bl-name { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-bar-track { background: #11151f; border-radius: 5px; height: 14px; overflow: hidden; }
+.cc-bar-track > div { height: 100%; background: linear-gradient(90deg, var(--accent), #b6f0b6); }
+.cc-bar-line .bl-num { text-align: right; color: var(--muted); }
+.cc-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 640px) { .cc-two-col { grid-template-columns: 1fr; } }
+
+.cc-games { display: grid; gap: 6px; }
+.cc-game {
+  display: grid;
+  grid-template-columns: 70px 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+.cc-game .g-result { font-weight: 800; text-align: center; }
+.cc-game .g-opp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-game .g-opp .g-sub { color: var(--muted); font-size: 0.75rem; }
+.cc-game .g-class { color: var(--muted); font-size: 0.78rem; text-transform: capitalize; }
+.cc-game a.g-link { color: var(--accent); text-decoration: none; font-size: 0.78rem; }
+.cc-game .g-reason { color: var(--muted); font-size: 0.72rem; }
+
 footer { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 16px; }
