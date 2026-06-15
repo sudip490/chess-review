@@ -490,6 +490,7 @@ function setPlayStatus(s) { els.playStatus.textContent = s; }
    Board
    ============================================================ */
 function onDragStart(source, piece) {
+  tapClearSelection();
   if (game.game_over()) return false;
   if (mode === "review") return false;          // replay is read-only
   if (mode === "play") {
@@ -503,6 +504,7 @@ function onDragStart(source, piece) {
 }
 
 function onDrop(source, target) {
+  tapClearSelection();
   const move = game.move({ from: source, to: target, promotion: "q" });
   if (move === null) return "snapback";
   if (mode === "play") afterMyMove(move);
@@ -540,13 +542,84 @@ function clearHighlights() {
     .forEach((el) => el.classList.remove("highlight-from", "highlight-to"));
 }
 
+/* ---------- Tap to move (mobile-friendly) ---------- */
+let tapSelected = null;
+
+function squareCoordFromEl(el) {
+  const sq = el.closest && el.closest(".square-55d63");
+  if (!sq) return null;
+  const m = sq.className.match(/\bsquare-([a-h][1-8])\b/);
+  return m ? m[1] : null;
+}
+
+function tapCanSelect(sq) {
+  if (game.game_over() || mode === "review") return false;
+  const piece = game.get(sq);
+  if (!piece) return false;
+  if (mode === "play") {
+    if (engineTask) return false;            // legend is thinking
+    return piece.color === myColor && game.turn() === myColor;
+  }
+  return piece.color === game.turn();        // analysis: whichever side is to move
+}
+
+function tapLegalTargets(sq) {
+  return game.moves({ square: sq, verbose: true }).map((m) => m.to);
+}
+
+function tapClearSelection() {
+  tapSelected = null;
+  document.querySelectorAll(".tap-selected, .tap-move, .tap-capture")
+    .forEach((el) => el.classList.remove("tap-selected", "tap-move", "tap-capture"));
+}
+
+function tapMark(sq, cls) {
+  const el = $("board").querySelector(".square-" + sq);
+  if (el) el.classList.add(cls);
+}
+
+function tapSelect(sq) {
+  tapClearSelection();
+  tapSelected = sq;
+  tapMark(sq, "tap-selected");
+  tapLegalTargets(sq).forEach((t) => tapMark(t, game.get(t) ? "tap-capture" : "tap-move"));
+}
+
+function tapDoMove(from, to) {
+  const move = game.move({ from, to, promotion: "q" });
+  if (!move) return;
+  board.position(game.fen());
+  if (mode === "play") afterMyMove(move);
+  else afterPositionChange();
+  highlightMove(from, to);
+}
+
+function onSquareTap(e) {
+  const sq = squareCoordFromEl(e.target);
+  if (!sq) return;
+  if (mode === "review") return;
+  if (tapSelected) {
+    if (sq === tapSelected) { tapClearSelection(); return; }
+    if (tapLegalTargets(tapSelected).indexOf(sq) !== -1) {
+      const from = tapSelected;
+      tapClearSelection();
+      tapDoMove(from, sq);
+      return;
+    }
+    if (tapCanSelect(sq)) { tapSelect(sq); return; }   // switch to another own piece
+    tapClearSelection();
+    return;
+  }
+  if (tapCanSelect(sq)) tapSelect(sq);
+}
+
 function syncFen() { els.fenInput.value = game.fen(); els.turnSelect.value = game.turn(); }
 
 function afterPositionChange() {
   syncFen();
   els.bestMove.textContent = "—"; els.pv.textContent = "—";
   updateEvalBar(0, null);
-  setStatus("Ready"); clearHighlights();
+  setStatus("Ready"); clearHighlights(); tapClearSelection();
 }
 
 /* ============================================================
@@ -687,6 +760,7 @@ function setup() {
     onDragStart, onDrop, onSnapEnd,
   });
   window.addEventListener("resize", () => board.resize());
+  $("board").addEventListener("click", onSquareTap);   // tap-to-move (mobile-friendly)
 
   els.analyzeBtn.addEventListener("click", analyze);
   els.stopBtn.addEventListener("click", stopAnalysis);
@@ -714,7 +788,7 @@ function setup() {
     else if (e.key === "ArrowRight") { gotoPly(reviewPly + 1); e.preventDefault(); }
   });
 
-  $("btn-flip").addEventListener("click", () => board.flip());
+  $("btn-flip").addEventListener("click", () => { tapClearSelection(); board.flip(); });
   $("btn-undo").addEventListener("click", () => {
     if (mode === "play") { game.undo(); game.undo(); } else { game.undo(); }
     board.position(game.fen()); afterPositionChange();
