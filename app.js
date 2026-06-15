@@ -241,7 +241,8 @@ async function autoEvalBar() {
 function renderEval(info, sourceLabel) {
   els.depth.textContent = (info.depth || "—") + (sourceLabel ? " (" + sourceLabel + ")" : "");
   els.eval.textContent = info.scoreText;
-  els.eval.style.color = info.scoreCp >= 0 ? "var(--good)" : "var(--bad)";
+  // Eval sits on the green feature card — use dark, high-contrast ink (not green-on-green).
+  els.eval.style.color = info.scoreCp >= 0 ? "#06140d" : "#5e0b1a";
   els.evalFill.style.width = (100 / (1 + Math.exp(-info.scoreCp / 400))).toFixed(1) + "%";
   updateEvalBar(info.scoreCp, (info.scoreText && info.scoreText.charAt(0) === "#") ? info.scoreText : null);
 
