@@ -666,6 +666,7 @@ const CC_API = "https://api.chess.com/pub";
 let ccGames = [];          // all loaded games (normalized), newest first
 let ccShown = 0;           // how many of ccGames are currently rendered
 const CC_PAGE = 25;
+let ccFiltered = [];       // games matching the current filters, newest first
 
 function setupInsights() {
   const goBtn = $("cc-go");
@@ -674,7 +675,10 @@ function setupInsights() {
   goBtn.addEventListener("click", runInsights);
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") runInsights(); });
   $("cc-more").addEventListener("click", () => renderGames(ccShown + CC_PAGE));
-  $("cc-all").addEventListener("click", () => renderGames(ccGames.length));
+  $("cc-all").addEventListener("click", () => renderGames(ccFiltered.length));
+  ["cc-filter-result", "cc-filter-color", "cc-filter-class"].forEach((id) =>
+    $(id).addEventListener("change", applyGameFilters));
+  $("cc-filter-opp").addEventListener("input", applyGameFilters);
 }
 
 function ccSetStatus(msg, isError) {
@@ -697,7 +701,8 @@ async function runInsights() {
   const months = parseInt($("cc-months").value, 10) || 3;
 
   // reset UI
-  ["cc-profile", "cc-ratings", "cc-overview", "cc-games-wrap"].forEach((id) => ($(id).hidden = true));
+  ["cc-profile", "cc-ratings", "cc-overview", "cc-trend", "cc-streaks",
+   "cc-opponents", "cc-games-wrap"].forEach((id) => ($(id).hidden = true));
   ccGames = []; ccShown = 0;
   $("cc-go").disabled = true;
   ccSetStatus(`Looking up “${raw}”…`);
@@ -743,9 +748,13 @@ async function runInsights() {
 
   ccSetStatus(`Loaded ${ccGames.length} games for ${profile.username}.`);
   renderOverview(ccGames, raw);
+  renderTrend(ccGames);
+  renderStreaks(ccGames);
+  renderOpponents(ccGames);
+  populateClassFilter(ccGames);
   $("cc-games-count").textContent = `(${ccGames.length})`;
   $("cc-games-wrap").hidden = false;
-  renderGames(CC_PAGE);
+  applyGameFilters();
   $("cc-go").disabled = false;
 }
 
@@ -942,22 +951,57 @@ function barLine(name, widthPct, numText) {
          `<span class="bl-num">${numText}</span></div>`;
 }
 
+// Populate the time-control filter from whatever classes the data contains.
+function populateClassFilter(games) {
+  const sel = $("cc-filter-class");
+  const seen = [];
+  for (const g of games) if (g.timeClass && !seen.includes(g.timeClass)) seen.push(g.timeClass);
+  sel.innerHTML = `<option value="all">All time controls</option>` +
+    seen.map((c) => `<option value="${c}">${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join("");
+}
+
+// Apply the result/color/time-control/opponent filters, then re-render the list.
+function applyGameFilters() {
+  const res = $("cc-filter-result").value;
+  const col = $("cc-filter-color").value;
+  const cls = $("cc-filter-class").value;
+  const q = $("cc-filter-opp").value.trim().toLowerCase();
+
+  ccFiltered = ccGames.filter((g) =>
+    (res === "all" || g.outcome === res) &&
+    (col === "all" || g.color === col) &&
+    (cls === "all" || g.timeClass === cls) &&
+    (!q || g.oppName.toLowerCase().includes(q)));
+
+  const active = (res !== "all" || col !== "all" || cls !== "all" || q);
+  $("cc-games-count").textContent = active
+    ? `(${ccFiltered.length} of ${ccGames.length})`
+    : `(${ccGames.length})`;
+  renderGames(CC_PAGE);
+}
+
 function renderGames(count) {
   const el = $("cc-games");
-  ccShown = Math.min(count, ccGames.length);
+  ccShown = Math.min(count, ccFiltered.length);
   const reasonShort = {
     won: "won", checkmated: "checkmate", resigned: "resign", timeout: "time",
     agreed: "agreed", repetition: "repetition", stalemate: "stalemate",
     insufficient: "insufficient", "50move": "50-move", timevsinsufficient: "time vs ins.",
     abandoned: "abandoned",
   };
-  el.innerHTML = ccGames.slice(0, ccShown).map((g, i) => {
+  if (!ccFiltered.length) {
+    el.innerHTML = `<div class="cc-muted" style="padding:8px 2px">No games match these filters.</div>`;
+    $("cc-more-row").hidden = true;
+    return;
+  }
+  el.innerHTML = ccFiltered.slice(0, ccShown).map((g) => {
+    const idx = ccGames.indexOf(g);
     const cls = g.outcome === "win" ? "s-win" : g.outcome === "loss" ? "s-loss" : "s-draw";
     const tag = g.outcome === "win" ? "W" : g.outcome === "loss" ? "L" : "D";
     const date = g.endTime ? new Date(g.endTime).toLocaleDateString() : "";
     const open = g.pgn ? `<span class="g-link">♟ Open on board</span>`
                        : `<span class="g-link g-link-off">no moves</span>`;
-    return `<div class="cc-game${g.pgn ? " is-clickable" : ""}" data-index="${i}">` +
+    return `<div class="cc-game${g.pgn ? " is-clickable" : ""}" data-index="${idx}">` +
       `<span class="g-result ${cls}">${tag}</span>` +
       `<span class="g-opp">vs ${g.oppName} <span class="g-sub">(${g.oppRating || "?"})</span>` +
       `<div class="g-reason">${g.color} · ${reasonShort[g.reason] || g.reason} · ${date}</div></span>` +
@@ -969,7 +1013,143 @@ function renderGames(count) {
   el.querySelectorAll(".cc-game.is-clickable").forEach((card) => {
     card.addEventListener("click", () => openGameReview(parseInt(card.dataset.index, 10)));
   });
-  $("cc-more-row").hidden = ccShown >= ccGames.length;
+  $("cc-more-row").hidden = ccShown >= ccFiltered.length;
+}
+
+/* ============================================================
+   Rating trend, streaks & toughest opponents
+   ============================================================ */
+function ccCap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+// Rating-over-time sparkline, one time control at a time.
+function renderTrend(games) {
+  const el = $("cc-trend");
+  const counts = {};
+  for (const g of games) if (g.myRating) counts[g.timeClass] = (counts[g.timeClass] || 0) + 1;
+  const order = Object.entries(counts).filter(([, n]) => n >= 2)
+    .sort((a, b) => b[1] - a[1]).map((e) => e[0]);
+  if (!order.length) { el.hidden = true; return; }
+
+  el.innerHTML =
+    `<div class="cc-panel"><div class="cc-trend-head"><h4>Rating over time</h4>` +
+    `<select id="cc-trend-class">` +
+    order.map((c) => `<option value="${c}">${ccCap(c)} (${counts[c]})</option>`).join("") +
+    `</select></div><div id="cc-trend-chart"></div></div>`;
+  el.hidden = false;
+  $("cc-trend-class").addEventListener("change", (e) => drawTrend(games, e.target.value));
+  drawTrend(games, order[0]);
+}
+
+function drawTrend(games, cls) {
+  const host = $("cc-trend-chart");
+  const pts = games.filter((g) => g.timeClass === cls && g.myRating)
+    .map((g) => ({ t: g.endTime, r: g.myRating }))
+    .sort((a, b) => a.t - b.t);
+  if (pts.length < 2) { host.innerHTML = `<div class="cc-muted">Not enough games to chart.</div>`; return; }
+
+  const W = 760, H = 170, pad = 28;
+  const rs = pts.map((p) => p.r);
+  let min = Math.min(...rs), max = Math.max(...rs);
+  if (min === max) { min -= 10; max += 10; }
+  const x = (i) => pad + (i / (pts.length - 1)) * (W - 2 * pad);
+  const y = (r) => pad + (1 - (r - min) / (max - min)) * (H - 2 * pad);
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.r).toFixed(1)}`).join(" ");
+  const area = `${line} L${x(pts.length - 1).toFixed(1)},${H - pad} L${x(0).toFixed(1)},${H - pad} Z`;
+  const first = pts[0].r, last = pts[pts.length - 1].r, diff = last - first;
+  const peak = Math.max(...rs), low = Math.min(...rs);
+  const sign = diff > 0 ? "+" : "";
+  const diffColor = diff > 0 ? "var(--good)" : diff < 0 ? "var(--bad)" : "var(--muted)";
+
+  host.innerHTML =
+    `<svg class="cc-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">` +
+    `<defs><linearGradient id="ccTrendFill" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0%" stop-color="#7cc4ff" stop-opacity="0.35"/>` +
+    `<stop offset="100%" stop-color="#7cc4ff" stop-opacity="0"/></linearGradient></defs>` +
+    `<path d="${area}" fill="url(#ccTrendFill)"/>` +
+    `<path d="${line}" fill="none" stroke="#7cc4ff" stroke-width="2" stroke-linejoin="round"/>` +
+    `<circle cx="${x(pts.length - 1).toFixed(1)}" cy="${y(last).toFixed(1)}" r="3.5" fill="#7cc4ff"/>` +
+    `</svg>` +
+    `<div class="cc-trend-stats">` +
+    `<span>Start <b>${first}</b></span><span>Now <b>${last}</b></span>` +
+    `<span>Peak <b>${peak}</b></span><span>Low <b>${low}</b></span>` +
+    `<span>Change <b style="color:${diffColor}">${sign}${diff}</b></span></div>`;
+}
+
+// Win/loss streaks (chronological) + biggest upset wins.
+function renderStreaks(games) {
+  const el = $("cc-streaks");
+  if (!games.length) { el.hidden = true; return; }
+  const chrono = games.slice().sort((a, b) => a.endTime - b.endTime);
+
+  let bestWin = 0, bestLoss = 0, run = 0, runType = null;
+  for (const g of chrono) {
+    if (g.outcome === runType) run++; else { runType = g.outcome; run = 1; }
+    if (g.outcome === "win") bestWin = Math.max(bestWin, run);
+    if (g.outcome === "loss") bestLoss = Math.max(bestLoss, run);
+  }
+  // current streak = trailing run of the same outcome (newest backwards)
+  let curType = chrono[chrono.length - 1].outcome, curRun = 0;
+  for (let i = chrono.length - 1; i >= 0; i--) {
+    if (chrono[i].outcome === curType) curRun++; else break;
+  }
+  const curLabel = curType === "win" ? `${curRun}W` : curType === "loss" ? `${curRun}L` : `${curRun}D`;
+  const curCls = curType === "win" ? "s-win" : curType === "loss" ? "s-loss" : "s-draw";
+
+  const upsets = games
+    .filter((g) => g.outcome === "win" && g.myRating && g.oppRating && g.oppRating > g.myRating)
+    .map((g) => ({ ...g, gap: g.oppRating - g.myRating }))
+    .sort((a, b) => b.gap - a.gap)
+    .slice(0, 5);
+
+  const upsetRows = upsets.length
+    ? upsets.map((g) => {
+        const date = g.endTime ? new Date(g.endTime).toLocaleDateString() : "";
+        return `<div class="cc-upset"><span class="u-gap s-win">+${g.gap}</span>` +
+          `<span class="u-opp">vs ${g.oppName} <span class="g-sub">(${g.oppRating})</span></span>` +
+          `<span class="u-date">${date}</span></div>`;
+      }).join("")
+    : `<div class="cc-muted">No wins against higher-rated opponents in this range.</div>`;
+
+  el.innerHTML =
+    `<div class="cc-two-col">` +
+    `<div class="cc-panel"><h4>Streaks</h4><div class="cc-stat-row">` +
+    `<div class="cc-stat"><div class="s-value ${curCls}">${curLabel}</div><div class="s-label">Current</div></div>` +
+    `<div class="cc-stat"><div class="s-value s-win">${bestWin}</div><div class="s-label">Best win streak</div></div>` +
+    `<div class="cc-stat"><div class="s-value s-loss">${bestLoss}</div><div class="s-label">Worst loss streak</div></div>` +
+    `</div></div>` +
+    `<div class="cc-panel"><h4>Biggest upset wins</h4><div class="cc-upsets">${upsetRows}</div></div>` +
+    `</div>`;
+  el.hidden = false;
+}
+
+// Most-faced opponents with head-to-head record.
+function renderOpponents(games) {
+  const el = $("cc-opponents");
+  const map = {};
+  for (const g of games) {
+    const k = g.oppName;
+    if (!k || k === "?") continue;
+    const o = map[k] || (map[k] = { name: k, t: 0, w: 0, l: 0, d: 0, rating: 0 });
+    o.t++;
+    if (g.outcome === "win") o.w++; else if (g.outcome === "loss") o.l++; else o.d++;
+    if (g.oppRating) o.rating = g.oppRating;
+  }
+  const top = Object.values(map).filter((o) => o.t >= 2)
+    .sort((a, b) => b.t - a.t).slice(0, 8);
+  if (!top.length) { el.hidden = true; return; }
+
+  const rows = top.map((o) => {
+    const wr = pct(o.w, o.t);
+    return `<div class="cc-opp-row">` +
+      `<span class="o-name" title="${o.name}">${o.name}<span class="g-sub"> (${o.rating || "?"})</span></span>` +
+      `<span class="o-rec"><b class="s-win">${o.w}</b>-<b class="s-loss">${o.l}</b>-<b class="s-draw">${o.d}</b></span>` +
+      `<div class="cc-bar-track"><div style="width:${Math.max(2, wr)}%"></div></div>` +
+      `<span class="o-wr">${wr}%</span></div>`;
+  }).join("");
+
+  el.innerHTML = `<div class="cc-panel"><h4>Most-faced opponents <span class="cc-muted">(${top.length})</span></h4>` +
+    `<div class="cc-opp-list">${rows}</div></div>`;
+  el.hidden = false;
 }
 
 /* ============================================================

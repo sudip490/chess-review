@@ -330,6 +330,44 @@ button.full { width: 100%; margin-bottom: 10px; }
 .cc-more-row { display: flex; gap: 8px; margin-top: 10px; }
 .cc-more-row button { flex: 1; }
 
+/* ---------- Rating trend chart ---------- */
+.cc-trend { margin-top: 16px; }
+.cc-trend-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.cc-trend-head h4 { margin: 0; font-size: 0.95rem; }
+.cc-spark { width: 100%; height: 170px; display: block; }
+.cc-trend-stats {
+  display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 8px;
+  color: var(--muted); font-size: 0.8rem;
+}
+.cc-trend-stats b { color: var(--text); }
+
+/* ---------- Streaks & upsets ---------- */
+.cc-streaks { margin-top: 16px; }
+.cc-upsets { display: grid; gap: 6px; }
+.cc-upset {
+  display: grid; grid-template-columns: 56px 1fr auto; gap: 10px; align-items: center;
+  font-size: 0.84rem;
+}
+.cc-upset .u-gap { font-weight: 800; }
+.cc-upset .u-opp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-upset .u-date { color: var(--muted); font-size: 0.75rem; }
+
+/* ---------- Toughest opponents ---------- */
+.cc-opponents { margin-top: 16px; }
+.cc-opp-list { display: grid; gap: 8px; }
+.cc-opp-row {
+  display: grid; grid-template-columns: 1fr 84px 1fr 44px; gap: 10px; align-items: center;
+  font-size: 0.84rem;
+}
+.cc-opp-row .o-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-opp-row .o-rec { font-family: ui-monospace, monospace; font-size: 0.8rem; text-align: center; }
+.cc-opp-row .o-wr { text-align: right; color: var(--muted); }
+
+/* ---------- Game filters ---------- */
+.cc-filters { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.cc-filters input { flex: 1; min-width: 150px; }
+.cc-filters select { flex: none; }
+
 /* ---------- Game review (replay on our board) ---------- */
 .review-bar {
   background: var(--panel-2);

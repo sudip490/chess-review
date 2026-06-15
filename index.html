@@ -8,7 +8,7 @@
   <!-- chessboard.js styles -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" />
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
   <header>
@@ -145,8 +145,28 @@
     <div id="cc-profile" class="cc-profile" hidden></div>
     <div id="cc-ratings" class="cc-ratings" hidden></div>
     <div id="cc-overview" class="cc-overview" hidden></div>
+    <div id="cc-trend" class="cc-trend" hidden></div>
+    <div id="cc-streaks" class="cc-streaks" hidden></div>
+    <div id="cc-opponents" class="cc-opponents" hidden></div>
     <div id="cc-games-wrap" hidden>
       <h3 class="cc-h3">Recent games <span id="cc-games-count" class="cc-muted"></span></h3>
+      <div id="cc-filters" class="cc-filters">
+        <input id="cc-filter-opp" type="text" placeholder="Search opponent…" autocomplete="off" />
+        <select id="cc-filter-result">
+          <option value="all">All results</option>
+          <option value="win">Wins</option>
+          <option value="loss">Losses</option>
+          <option value="draw">Draws</option>
+        </select>
+        <select id="cc-filter-color">
+          <option value="all">Both colors</option>
+          <option value="white">As white</option>
+          <option value="black">As black</option>
+        </select>
+        <select id="cc-filter-class">
+          <option value="all">All time controls</option>
+        </select>
+      </div>
       <div id="cc-games" class="cc-games"></div>
       <div class="cc-more-row" id="cc-more-row" hidden>
         <button id="cc-more">Load more</button>
@@ -163,6 +183,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
