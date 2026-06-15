@@ -570,7 +570,29 @@ function setupLegendSelect() {
   $("btn-hint").addEventListener("click", hint);
 }
 
+/* ---------- Theme (light / dark) ---------- */
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === "light") root.setAttribute("data-theme", "light");
+  else root.removeAttribute("data-theme");
+  const btn = $("theme-toggle");
+  if (btn) btn.textContent = theme === "light" ? "☀️" : "🌙";
+}
+
+function setupTheme() {
+  let theme = "dark";
+  try { theme = localStorage.getItem("ca-theme") || "dark"; } catch (e) {}
+  applyTheme(theme);
+  const btn = $("theme-toggle");
+  if (btn) btn.addEventListener("click", () => {
+    const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+    applyTheme(next);
+    try { localStorage.setItem("ca-theme", next); } catch (e) {}
+  });
+}
+
 function setup() {
+  setupTheme();
   board = Chessboard("board", {
     draggable: true, position: "start",
     pieceTheme: "assets/pieces/{piece}.png",

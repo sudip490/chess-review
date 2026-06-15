@@ -5,13 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chess Analysis — Best Move Finder</title>
 
+  <!-- fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+
   <!-- chessboard.js styles -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" />
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body>
   <header>
+    <button id="theme-toggle" class="theme-toggle" title="Toggle light / dark theme" aria-label="Toggle theme">🌙</button>
     <h1>♟ Chess Analysis</h1>
     <p class="tagline">Find the best move in seconds — powered by Stockfish</p>
     <div id="visitor-count" class="visitor" title="Total visitors">👁 … visitors</div>
@@ -183,6 +190,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
