@@ -8,7 +8,7 @@
   <!-- chessboard.js styles -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" />
-  <link rel="stylesheet" href="styles.css?v=2" />
+  <link rel="stylesheet" href="styles.css?v=3" />
 </head>
 <body>
   <header>
@@ -25,6 +25,23 @@
           <div class="eval-bar-v-label" id="eval-bar-v-label">0.0</div>
         </div>
         <div id="board"></div>
+      </div>
+
+      <div id="review-bar" class="review-bar" hidden>
+        <div class="review-head">
+          <div id="review-title" class="review-title">Game review</div>
+          <button id="rv-exit" class="rv-exit" title="Close review">✕</button>
+        </div>
+        <div id="review-result" class="review-result"></div>
+        <div class="review-controls">
+          <button id="rv-first" title="First move">⏮</button>
+          <button id="rv-prev" title="Previous move">◀</button>
+          <span id="rv-counter" class="rv-counter">0 / 0</span>
+          <button id="rv-next" title="Next move">▶</button>
+          <button id="rv-last" title="Last move">⏭</button>
+          <button id="rv-analyze" class="primary" title="Analyze this position">⚡ Analyze</button>
+        </div>
+        <div id="review-moves" class="review-moves"></div>
       </div>
 
       <div class="board-controls">
@@ -131,7 +148,10 @@
     <div id="cc-games-wrap" hidden>
       <h3 class="cc-h3">Recent games <span id="cc-games-count" class="cc-muted"></span></h3>
       <div id="cc-games" class="cc-games"></div>
-      <button id="cc-more" class="full" hidden>Load more</button>
+      <div class="cc-more-row" id="cc-more-row" hidden>
+        <button id="cc-more">Load more</button>
+        <button id="cc-all">Show all</button>
+      </div>
     </div>
   </section>
 
@@ -143,6 +163,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

@@ -320,7 +320,46 @@ button.full { width: 100%; margin-bottom: 10px; }
 .cc-game .g-opp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cc-game .g-opp .g-sub { color: var(--muted); font-size: 0.75rem; }
 .cc-game .g-class { color: var(--muted); font-size: 0.78rem; text-transform: capitalize; }
-.cc-game a.g-link { color: var(--accent); text-decoration: none; font-size: 0.78rem; }
+.cc-game .g-link { color: var(--accent); text-decoration: none; font-size: 0.78rem; white-space: nowrap; }
+.cc-game .g-link-off { color: var(--muted); }
 .cc-game .g-reason { color: var(--muted); font-size: 0.72rem; }
+.cc-game.is-clickable { cursor: pointer; transition: background .12s, transform .12s; }
+.cc-game.is-clickable:hover { background: #1b2535; transform: translateX(2px); }
+.cc-game.is-clickable:hover .g-link { text-decoration: underline; }
+
+.cc-more-row { display: flex; gap: 8px; margin-top: 10px; }
+.cc-more-row button { flex: 1; }
+
+/* ---------- Game review (replay on our board) ---------- */
+.review-bar {
+  background: var(--panel-2);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.review-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.review-title { font-weight: 700; font-size: 0.92rem; line-height: 1.4; }
+.rv-exit {
+  background: transparent; border: none; color: var(--muted);
+  font-size: 1rem; cursor: pointer; padding: 0 4px; flex: none;
+}
+.rv-exit:hover { color: var(--bad); }
+.review-result { color: var(--muted); font-size: 0.8rem; margin: 2px 0 10px; }
+.review-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.review-controls button { padding: 8px 10px; font-family: ui-monospace, monospace; }
+.review-controls button#rv-analyze { margin-left: auto; }
+.rv-counter { min-width: 56px; text-align: center; color: var(--muted); font-size: 0.85rem; font-family: ui-monospace, monospace; }
+.review-moves {
+  margin-top: 10px;
+  max-height: 120px;
+  overflow-y: auto;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.85rem;
+  line-height: 1.9;
+}
+.review-moves .moveno { color: var(--muted); margin: 0 2px 0 8px; }
+.review-moves .rv-move { cursor: pointer; padding: 1px 5px; border-radius: 4px; }
+.review-moves .rv-move:hover { background: var(--panel); }
+.review-moves .rv-move.current { background: var(--accent); color: #0c1422; font-weight: 700; }
 
 footer { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 16px; }

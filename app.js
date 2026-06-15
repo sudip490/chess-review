@@ -365,6 +365,7 @@ function newGame() {
   playGen++;
   mode = "play";
   engineTask = null;
+  $("review-bar").hidden = true;
   currentLegend = LEGENDS[parseInt($("legend-select").value, 10)] || LEGENDS[0];
   myColor = $("color-select").value;
   game.reset();
@@ -489,6 +490,7 @@ function setPlayStatus(s) { els.playStatus.textContent = s; }
    ============================================================ */
 function onDragStart(source, piece) {
   if (game.game_over()) return false;
+  if (mode === "review") return false;          // replay is read-only
   if (mode === "play") {
     if (engineTask) return false;               // legend/engine is thinking
     if (piece[0] !== myColor) return false;
@@ -578,6 +580,20 @@ function setup() {
 
   els.analyzeBtn.addEventListener("click", analyze);
   els.stopBtn.addEventListener("click", stopAnalysis);
+
+  // Game-review controls
+  $("rv-first").addEventListener("click", () => gotoPly(0));
+  $("rv-prev").addEventListener("click", () => gotoPly(reviewPly - 1));
+  $("rv-next").addEventListener("click", () => gotoPly(reviewPly + 1));
+  $("rv-last").addEventListener("click", () => gotoPly(reviewFens.length - 1));
+  $("rv-analyze").addEventListener("click", analyze);
+  $("rv-exit").addEventListener("click", exitReview);
+  document.addEventListener("keydown", (e) => {
+    if (mode !== "review") return;
+    if (e.key === "ArrowLeft") { gotoPly(reviewPly - 1); e.preventDefault(); }
+    else if (e.key === "ArrowRight") { gotoPly(reviewPly + 1); e.preventDefault(); }
+  });
+
   $("btn-flip").addEventListener("click", () => board.flip());
   $("btn-undo").addEventListener("click", () => {
     if (mode === "play") { game.undo(); game.undo(); } else { game.undo(); }
@@ -585,6 +601,7 @@ function setup() {
   });
   $("btn-new").addEventListener("click", () => {
     mode = "analyze"; playGen++; engineTask = null;
+    $("review-bar").hidden = true;
     game.reset(); board.orientation("white"); board.position("start");
     afterPositionChange();
     setPlayStatus("Pick a legend and press New Game.");
@@ -657,6 +674,7 @@ function setupInsights() {
   goBtn.addEventListener("click", runInsights);
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") runInsights(); });
   $("cc-more").addEventListener("click", () => renderGames(ccShown + CC_PAGE));
+  $("cc-all").addEventListener("click", () => renderGames(ccGames.length));
 }
 
 function ccSetStatus(msg, isError) {
@@ -753,10 +771,15 @@ function normalizeGame(g, user) {
     myRating: me.rating || 0,
     oppName: opp.username || "?",
     oppRating: opp.rating || 0,
+    whiteName: g.white.username || "White",
+    blackName: g.black.username || "Black",
+    whiteRating: g.white.rating || 0,
+    blackRating: g.black.rating || 0,
     timeClass: g.time_class || "—",
     url: g.url || null,
     endTime: (g.end_time || 0) * 1000,
     opening: openingFromPgn(g.pgn),
+    pgn: g.pgn || null,               // full game score — replayed on our own board
   };
 }
 
@@ -928,19 +951,124 @@ function renderGames(count) {
     insufficient: "insufficient", "50move": "50-move", timevsinsufficient: "time vs ins.",
     abandoned: "abandoned",
   };
-  el.innerHTML = ccGames.slice(0, ccShown).map((g) => {
+  el.innerHTML = ccGames.slice(0, ccShown).map((g, i) => {
     const cls = g.outcome === "win" ? "s-win" : g.outcome === "loss" ? "s-loss" : "s-draw";
     const tag = g.outcome === "win" ? "W" : g.outcome === "loss" ? "L" : "D";
     const date = g.endTime ? new Date(g.endTime).toLocaleDateString() : "";
-    const link = g.url ? `<a class="g-link" href="${g.url}" target="_blank" rel="noopener">view ↗</a>` : "";
-    return `<div class="cc-game">` +
+    const open = g.pgn ? `<span class="g-link">♟ Open on board</span>`
+                       : `<span class="g-link g-link-off">no moves</span>`;
+    return `<div class="cc-game${g.pgn ? " is-clickable" : ""}" data-index="${i}">` +
       `<span class="g-result ${cls}">${tag}</span>` +
       `<span class="g-opp">vs ${g.oppName} <span class="g-sub">(${g.oppRating || "?"})</span>` +
       `<div class="g-reason">${g.color} · ${reasonShort[g.reason] || g.reason} · ${date}</div></span>` +
       `<span class="g-class">${g.timeClass}</span>` +
-      `${link}</div>`;
+      `${open}</div>`;
   }).join("");
-  $("cc-more").hidden = ccShown >= ccGames.length;
+
+  // Click a game -> replay it on our own board (no redirect to Chess.com).
+  el.querySelectorAll(".cc-game.is-clickable").forEach((card) => {
+    card.addEventListener("click", () => openGameReview(parseInt(card.dataset.index, 10)));
+  });
+  $("cc-more-row").hidden = ccShown >= ccGames.length;
+}
+
+/* ============================================================
+   Game review — replay a Chess.com game move-by-move on our board
+   ============================================================ */
+let reviewFens = [];     // FEN after each ply (index 0 = starting position)
+let reviewMoves = [];    // verbose moves, reviewMoves[k] led to reviewFens[k+1]
+let reviewSans = [];     // SAN for each ply
+let reviewPly = 0;       // 0 = start, length-1 = final position
+
+function openGameReview(idx) {
+  const g = ccGames[idx];
+  if (!g || !g.pgn) { ccSetStatus("This game has no moves to replay.", true); return; }
+
+  const parsed = new Chess();
+  if (!parsed.load_pgn(g.pgn)) { ccSetStatus("Couldn't read this game's moves.", true); return; }
+  const history = parsed.history({ verbose: true });
+  if (!history.length) { ccSetStatus("This game has no moves to replay.", true); return; }
+
+  // Rebuild the position after every ply so we can scrub back and forth.
+  const replay = new Chess();
+  reviewFens = [replay.fen()];
+  reviewMoves = [];
+  reviewSans = [];
+  for (const m of history) {
+    replay.move(m);
+    reviewFens.push(replay.fen());
+    reviewMoves.push(m);
+    reviewSans.push(m.san);
+  }
+
+  // Enter review mode — cancel any play/analysis in flight.
+  mode = "review";
+  playGen++;
+  engineTask = null;
+  finishAnalyze("");
+
+  board.orientation(g.color === "black" ? "black" : "white");
+
+  const title = `${g.whiteName} (${g.whiteRating || "?"}) vs ${g.blackName} (${g.blackRating || "?"})`;
+  $("review-title").textContent = title;
+  const resultMap = { win: "You won 🎉", loss: "You lost", draw: "Draw" };
+  const date = g.endTime ? new Date(g.endTime).toLocaleDateString() : "";
+  $("review-result").textContent =
+    `${g.timeClass} · ${resultMap[g.outcome] || ""}${date ? " · " + date : ""}`;
+  $("review-bar").hidden = false;
+
+  renderReviewMoves();
+  gotoPly(reviewFens.length - 1);   // jump to the final position first
+
+  $("board").scrollIntoView({ behavior: "smooth", block: "start" });
+  setStatus("Reviewing game — use ◀ ▶ to step through moves.");
+  setPlayStatus("Reviewing a Chess.com game.");
+}
+
+function renderReviewMoves() {
+  const el = $("review-moves");
+  let html = "";
+  for (let i = 0; i < reviewSans.length; i++) {
+    if (i % 2 === 0) html += `<span class="moveno">${i / 2 + 1}.</span>`;
+    html += `<span class="rv-move" data-ply="${i + 1}">${reviewSans[i]}</span>`;
+  }
+  el.innerHTML = html;
+  el.querySelectorAll(".rv-move").forEach((m) => {
+    m.addEventListener("click", () => gotoPly(parseInt(m.dataset.ply, 10)));
+  });
+}
+
+function gotoPly(ply) {
+  if (!reviewFens.length) return;
+  reviewPly = Math.max(0, Math.min(ply, reviewFens.length - 1));
+  const fen = reviewFens[reviewPly];
+  board.position(fen);
+  game.load(fen);          // so "Analyze" works on the shown position
+  syncFen();
+
+  if (reviewPly > 0) {
+    const mv = reviewMoves[reviewPly - 1];
+    highlightMove(mv.from, mv.to);
+  } else {
+    clearHighlights();
+  }
+
+  $("rv-counter").textContent = `${reviewPly} / ${reviewFens.length - 1}`;
+  const moves = $("review-moves");
+  moves.querySelectorAll(".rv-move").forEach((m) => {
+    const on = parseInt(m.dataset.ply, 10) === reviewPly;
+    m.classList.toggle("current", on);
+    if (on) m.scrollIntoView({ block: "nearest" });
+  });
+  autoEvalBar();
+}
+
+function exitReview() {
+  $("review-bar").hidden = true;
+  reviewFens = []; reviewMoves = []; reviewSans = []; reviewPly = 0;
+  mode = "analyze";
+  setStatus("Ready");
+  setPlayStatus("Pick a legend and press New Game.");
 }
 
 window.addEventListener("DOMContentLoaded", setup);
