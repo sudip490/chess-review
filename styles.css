@@ -1,5 +1,8 @@
 * { box-sizing: border-box; }
 
+/* Keep [hidden] elements hidden even when a class sets display (flex/grid). */
+[hidden] { display: none !important; }
+
 :root {
   --bg: #0a0d0b;
   --bg-2: #0e1210;
@@ -353,7 +356,12 @@ button.full { width: 100%; margin-bottom: 10px; }
 .move-list .move.current { background: var(--accent-grad); color: #06140d; font-weight: 700; }
 
 /* ---------- Chess.com Insights ---------- */
-.insights-area { max-width: 920px; margin: 0 auto 36px; padding: 28px; }
+.insights-area { max-width: 920px; margin: 8px auto 48px; padding: 32px; }
+.insights-head { text-align: center; margin-bottom: 4px; }
+.insights-head h2 { margin: 6px 0 0; font-size: 1.8rem; }
+.insights-head .muted-small { margin-top: 8px; }
+.insights-area .insights-search { max-width: 640px; margin: 18px auto 8px; }
+.insights-area .cc-status { text-align: center; }
 .cc-h3 { margin: 24px 0 12px; font-size: 1.1rem; font-weight: 700; }
 .cc-muted { color: var(--muted); font-weight: 400; font-size: 0.85rem; font-family: "Inter", sans-serif; }
 
