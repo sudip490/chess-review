@@ -291,12 +291,16 @@ select:focus, input:focus { outline: none; border-color: var(--accent); box-shad
 .fen-row input { flex: 1; }
 
 /* ---------- Analysis panel ---------- */
-.analysis-area { width: 380px; max-width: 95vw; padding: 22px; }
+.analysis-area { width: 380px; max-width: 95vw; padding: 22px; position: relative; }
 .analysis-area h2, .play-area h2, .insights-area h2 { margin-top: 0; font-weight: 700; }
 
-.analysis-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.analysis-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; padding-right: 84px; }
 .analysis-head h2 { margin: 0; }
 .float-toggle {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 2;
   padding: 6px 12px;
   font-size: 0.76rem;
   border-radius: 999px;
