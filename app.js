@@ -571,6 +571,21 @@ function setupLegendSelect() {
   $("btn-hint").addEventListener("click", hint);
 }
 
+/* ---------- View tabs ---------- */
+function showView(view) {
+  const studio = $("view-studio");
+  const insights = $("view-insights");
+  if (!studio || !insights) return;
+  const isInsights = view === "insights";
+  studio.hidden = isInsights;
+  insights.hidden = !isInsights;
+  document.querySelectorAll(".tab").forEach((t) =>
+    t.classList.toggle("active", t.dataset.view === view));
+  // chessboard.js needs a resize once its container is visible again.
+  if (!isInsights && board) board.resize();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 /* ---------- Theme (light / dark) ---------- */
 function applyTheme(theme) {
   const root = document.documentElement;
@@ -605,9 +620,14 @@ function setup() {
   els.stopBtn.addEventListener("click", stopAnalysis);
   const navAnalyze = $("nav-analyze");
   if (navAnalyze) navAnalyze.addEventListener("click", () => {
+    showView("studio");
     document.querySelector(".board-area")?.scrollIntoView({ behavior: "smooth", block: "start" });
     analyze();
   });
+
+  // View tabs (Analysis Studio / Player Insights)
+  document.querySelectorAll(".tab").forEach((tab) =>
+    tab.addEventListener("click", () => showView(tab.dataset.view)));
 
   // Game-review controls
   $("rv-first").addEventListener("click", () => gotoPly(0));
@@ -1225,6 +1245,7 @@ function openGameReview(idx) {
     `${g.timeClass} · ${resultMap[g.outcome] || ""}${date ? " · " + date : ""}`;
   $("review-bar").hidden = false;
 
+  showView("studio");               // the board lives in the Studio view
   renderReviewMoves();
   gotoPly(reviewFens.length - 1);   // jump to the final position first
 

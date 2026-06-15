@@ -148,6 +148,37 @@ body {
 }
 .tagline { color: var(--muted); margin: 12px 0 0; font-size: 1rem; }
 
+/* ---------- View tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  width: fit-content;
+  max-width: 95vw;
+  margin: 22px auto 0;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+}
+.tab {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 11px 26px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+.tab:hover:not(.active) { color: var(--text); transform: none; }
+.tab.active {
+  background: var(--accent-grad);
+  color: #06140d;
+  box-shadow: 0 8px 20px rgba(63, 224, 138, 0.28);
+}
+
 main {
   display: flex;
   gap: 22px;
@@ -356,7 +387,7 @@ button.full { width: 100%; margin-bottom: 10px; }
 .move-list .move.current { background: var(--accent-grad); color: #06140d; font-weight: 700; }
 
 /* ---------- Chess.com Insights ---------- */
-.insights-area { max-width: 920px; margin: 8px auto 48px; padding: 32px; }
+.insights-area { max-width: 960px; margin: 26px auto 48px; padding: 32px; }
 .insights-head { text-align: center; margin-bottom: 4px; }
 .insights-head h2 { margin: 6px 0 0; font-size: 1.8rem; }
 .insights-head .muted-small { margin-top: 8px; }

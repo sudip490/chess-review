@@ -14,7 +14,7 @@
   <!-- chessboard.js styles -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" />
-  <link rel="stylesheet" href="styles.css?v=10" />
+  <link rel="stylesheet" href="styles.css?v=11" />
 </head>
 <body>
   <nav class="topnav">
@@ -39,7 +39,12 @@
     <p class="tagline">Find the best move in seconds — powered by Stockfish</p>
   </header>
 
-  <main>
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-view="studio" role="tab">♟ Analysis Studio</button>
+    <button class="tab" data-view="insights" role="tab">📊 Player Insights</button>
+  </div>
+
+  <main id="view-studio">
     <section class="board-area">
       <div class="board-row">
         <div class="eval-bar-v" id="eval-bar-v" title="Who is winning (white = bottom)">
@@ -147,7 +152,7 @@
     </section>
   </main>
 
-  <section class="insights-area">
+  <section class="insights-area" id="view-insights" hidden>
     <div class="insights-head">
       <span class="eyebrow">Player Research</span>
       <h2>Chess.com Insights</h2>
@@ -208,6 +213,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
