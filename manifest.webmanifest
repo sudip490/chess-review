@@ -1,0 +1,19 @@
+{
+  "name": "ChessReview — Editorial Studio",
+  "short_name": "ChessReview",
+  "description": "Find the best move in seconds — powered by Stockfish.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0d0b",
+  "theme_color": "#0a0d0b",
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
