@@ -748,6 +748,7 @@ function normalizeGame(g, user) {
 
   return {
     outcome, reason,
+    oppResult: opp.result,            // how the opponent finished (for win breakdowns)
     color: meIsWhite ? "white" : "black",
     myRating: me.rating || 0,
     oppName: opp.username || "?",
@@ -828,6 +829,7 @@ function renderOverview(games, user) {
   const byClass = {};
   const openings = {};
   const lossReasons = {};
+  const winReasons = {};
 
   for (const g of games) {
     if (g.outcome === "win") w++; else if (g.outcome === "loss") l++; else d++;
@@ -838,6 +840,7 @@ function renderOverview(games, user) {
     byClass[c].t++; byClass[c][g.outcome === "win" ? "w" : g.outcome === "loss" ? "l" : "d"]++;
     if (g.opening) openings[g.opening] = (openings[g.opening] || 0) + 1;
     if (g.outcome === "loss") lossReasons[g.reason] = (lossReasons[g.reason] || 0) + 1;
+    if (g.outcome === "win" && g.oppResult) winReasons[g.oppResult] = (winReasons[g.oppResult] || 0) + 1;
   }
 
   const winRate = pct(w, total);
@@ -847,7 +850,12 @@ function renderOverview(games, user) {
     checkmated: "Checkmated", resigned: "Resigned", timeout: "Lost on time",
     abandoned: "Abandoned", lose: "Lost", kingofthehill: "King of the hill", threecheck: "Three-check",
   };
+  const winLabels = {
+    checkmated: "By checkmate", resigned: "Opponent resigned", timeout: "Opponent lost on time",
+    abandoned: "Opponent abandoned", kingofthehill: "King of the hill", threecheck: "Three-check",
+  };
   const topReasons = Object.entries(lossReasons).sort((a, b) => b[1] - a[1]);
+  const topWins = Object.entries(winReasons).sort((a, b) => b[1] - a[1]);
 
   const statRow =
     `<div class="cc-stat-row">` +
@@ -885,6 +893,12 @@ function renderOverview(games, user) {
       `</div></div>`
     : "";
 
+  const winsPanel = topWins.length
+    ? `<div class="cc-panel"><h4>How wins happened</h4><div class="cc-bars">` +
+      topWins.map(([r, n]) => barLine(winLabels[r] || r, pct(n, w), String(n))).join("") +
+      `</div></div>`
+    : "";
+
   const reasonsPanel = topReasons.length
     ? `<div class="cc-panel"><h4>How losses happened</h4><div class="cc-bars">` +
       topReasons.map(([r, n]) => barLine(reasonLabels[r] || r, pct(n, l), String(n))).join("") +
@@ -894,7 +908,8 @@ function renderOverview(games, user) {
   el.innerHTML =
     statRow + wdlBar +
     `<div class="cc-two-col">${colorPanel}${classPanel}</div>` +
-    `<div class="cc-two-col">${openingsPanel}${reasonsPanel}</div>`;
+    `<div class="cc-two-col">${winsPanel}${reasonsPanel}</div>` +
+    (openingsPanel ? `<div class="cc-two-col">${openingsPanel}</div>` : "");
   el.hidden = false;
 }
 
