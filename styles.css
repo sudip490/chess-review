@@ -311,17 +311,24 @@ select:focus, input:focus {
 }
 .pv { font-family: ui-monospace, Menlo, monospace; font-size: 0.95rem; line-height: 1.7; word-break: break-word; margin-top: 6px; }
 
-/* ---------- Distinctive board theme ---------- */
+/* ---------- Distinctive premium board theme ---------- */
+.board-row { position: relative; }
+#board {
+  padding: 6px;
+  background: linear-gradient(145deg, #2b3450, #1a2138);
+}
 #board .white-1e1d7 {
-  background: #e9eef7 !important;
-  color: #6f7da0 !important;
+  background: linear-gradient(145deg, #eef2fb, #dbe3f3) !important;
+  color: #5a6b96 !important;
 }
 #board .black-3c85d {
-  background: #5b76b3 !important;
-  color: #dde6f7 !important;
+  background: linear-gradient(145deg, #5d79c2, #44589c) !important;
+  color: #e3ebfb !important;
 }
-:root[data-theme="light"] #board .white-1e1d7 { background: #f1f4fb !important; }
-:root[data-theme="light"] #board .black-3c85d { background: #6f8cce !important; }
+#board .notation-322f9 { font-weight: 700; font-size: 0.62rem; }
+:root[data-theme="light"] #board { background: linear-gradient(145deg, #c7d3ee, #aebee0); }
+:root[data-theme="light"] #board .white-1e1d7 { background: linear-gradient(145deg, #ffffff, #eef2fb) !important; }
+:root[data-theme="light"] #board .black-3c85d { background: linear-gradient(145deg, #7894d8, #5d79c2) !important; }
 
 /* ---------- Animated move highlights ---------- */
 .highlight-from {
