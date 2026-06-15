@@ -754,13 +754,15 @@ function setupTheme() {
 function setup() {
   setupTheme();
   setupFloat();
+  // On touch devices: no dragging — pure tap-to-move (tap a piece, then tap a square).
+  const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
   board = Chessboard("board", {
-    draggable: true, position: "start",
+    draggable: !isTouch, position: "start",
     pieceTheme: "assets/pieces/{piece}.png",
     onDragStart, onDrop, onSnapEnd,
   });
   window.addEventListener("resize", () => board.resize());
-  $("board").addEventListener("click", onSquareTap);   // tap-to-move (mobile-friendly)
+  $("board").addEventListener("click", onSquareTap);   // tap-to-move
 
   els.analyzeBtn.addEventListener("click", analyze);
   els.stopBtn.addEventListener("click", stopAnalysis);
