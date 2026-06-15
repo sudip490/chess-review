@@ -14,7 +14,7 @@
   <!-- chessboard.js styles -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" />
-  <link rel="stylesheet" href="styles.css?v=11" />
+  <link rel="stylesheet" href="styles.css?v=12" />
 </head>
 <body>
   <nav class="topnav">
@@ -103,8 +103,11 @@
       </div>
     </section>
 
-    <section class="analysis-area">
-      <h2>Analysis</h2>
+    <section class="analysis-area" id="analysis-panel">
+      <div class="analysis-head">
+        <h2>Analysis</h2>
+        <button id="float-toggle" class="float-toggle" title="Float this panel on screen">⇱ Float</button>
+      </div>
 
       <div class="best-move-box">
         <div class="label">Best move</div>
@@ -213,6 +216,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>

@@ -294,6 +294,50 @@ select:focus, input:focus { outline: none; border-color: var(--accent); box-shad
 .analysis-area { width: 380px; max-width: 95vw; padding: 22px; }
 .analysis-area h2, .play-area h2, .insights-area h2 { margin-top: 0; font-weight: 700; }
 
+.analysis-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.analysis-head h2 { margin: 0; }
+.float-toggle {
+  padding: 6px 12px;
+  font-size: 0.76rem;
+  border-radius: 999px;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.float-toggle:hover:not(:disabled) { color: var(--accent); border-color: var(--line-strong); }
+
+/* ---------- Floating analysis ---------- */
+.analysis-area.floating {
+  position: fixed;
+  z-index: 90;
+  width: 340px;
+  max-width: 92vw;
+  max-height: 86vh;
+  overflow-y: auto;
+  border-color: var(--line-strong);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  animation: float-in .2s ease;
+}
+.analysis-area.floating .analysis-head {
+  cursor: grab;
+  margin: -6px -6px 10px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.analysis-area.floating .analysis-head:hover { background: var(--card-2); }
+.analysis-area.floating.dragging .analysis-head { cursor: grabbing; }
+.analysis-area.floating .analysis-head h2::before {
+  content: "⠿  ";
+  color: var(--muted);
+  font-size: 0.9rem;
+  vertical-align: 2px;
+}
+@keyframes float-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+
 .label { color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: .12em; font-weight: 700; }
 
 .best-move-box, .eval-box, .pv-box { margin-bottom: 16px; }

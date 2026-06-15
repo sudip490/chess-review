@@ -571,6 +571,77 @@ function setupLegendSelect() {
   $("btn-hint").addEventListener("click", hint);
 }
 
+/* ---------- Floating analysis panel ---------- */
+function setupFloat() {
+  const panel = $("analysis-panel");
+  const toggle = $("float-toggle");
+  const head = panel && panel.querySelector(".analysis-head");
+  if (!panel || !toggle || !head) return;
+
+  const clamp = () => {
+    const maxX = window.innerWidth - panel.offsetWidth - 8;
+    const maxY = window.innerHeight - 56;
+    let x = parseInt(panel.style.left, 10) || 0;
+    let y = parseInt(panel.style.top, 10) || 0;
+    panel.style.left = Math.max(8, Math.min(x, maxX)) + "px";
+    panel.style.top = Math.max(8, Math.min(y, maxY)) + "px";
+  };
+  const savePos = () => {
+    try { localStorage.setItem("ca-float-pos", panel.style.left + "," + panel.style.top); } catch (e) {}
+  };
+
+  function setFloating(on) {
+    panel.classList.toggle("floating", on);
+    toggle.innerHTML = on ? "⇲ Dock" : "⇱ Float";
+    toggle.title = on ? "Dock the panel back" : "Float this panel on screen";
+    if (on) {
+      let pos = null;
+      try { pos = (localStorage.getItem("ca-float-pos") || "").split(","); } catch (e) {}
+      if (pos && pos.length === 2 && pos[0]) {
+        panel.style.left = pos[0]; panel.style.top = pos[1];
+      } else {
+        panel.style.left = (window.innerWidth - 340 - 24) + "px";
+        panel.style.top = "84px";
+      }
+      clamp();
+    } else {
+      panel.style.left = panel.style.top = "";
+    }
+    try { localStorage.setItem("ca-float", on ? "1" : "0"); } catch (e) {}
+  }
+
+  toggle.addEventListener("click", () => setFloating(!panel.classList.contains("floating")));
+
+  let dragging = false, offX = 0, offY = 0;
+  head.addEventListener("pointerdown", (e) => {
+    if (!panel.classList.contains("floating") || e.target.closest("#float-toggle")) return;
+    dragging = true;
+    offX = e.clientX - panel.offsetLeft;
+    offY = e.clientY - panel.offsetTop;
+    panel.classList.add("dragging");
+    head.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  head.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    panel.style.left = (e.clientX - offX) + "px";
+    panel.style.top = (e.clientY - offY) + "px";
+  });
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    panel.classList.remove("dragging");
+    clamp(); savePos();
+  };
+  head.addEventListener("pointerup", endDrag);
+  head.addEventListener("pointercancel", endDrag);
+  window.addEventListener("resize", () => { if (panel.classList.contains("floating")) clamp(); });
+
+  let wasFloat = "0";
+  try { wasFloat = localStorage.getItem("ca-float") || "0"; } catch (e) {}
+  if (wasFloat === "1") setFloating(true);
+}
+
 /* ---------- View tabs ---------- */
 function showView(view) {
   const studio = $("view-studio");
@@ -609,6 +680,7 @@ function setupTheme() {
 
 function setup() {
   setupTheme();
+  setupFloat();
   board = Chessboard("board", {
     draggable: true, position: "start",
     pieceTheme: "assets/pieces/{piece}.png",
