@@ -886,9 +886,13 @@ function ccSetStatus(msg, isError) {
 async function ccFetch(url) {
   try {
     const r = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!r.ok) return null;
+    if (r.status === 404) return null;                 // genuinely not found
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);     // blocked / rate-limited / server error
     return await r.json();
-  } catch (e) { return null; }
+  } catch (e) {
+    // Network failure or non-404 error: couldn't reach the API at all.
+    throw new Error(`Could not reach Chess.com (${e.message}). It may be blocked by your network/firewall.`);
+  }
 }
 
 async function runInsights() {
@@ -903,7 +907,14 @@ async function runInsights() {
   $("cc-go").disabled = true;
   ccSetStatus(`Looking up “${raw}”…`);
 
-  const profile = await ccFetch(`${CC_API}/player/${encodeURIComponent(raw)}`);
+  let profile;
+  try {
+    profile = await ccFetch(`${CC_API}/player/${encodeURIComponent(raw)}`);
+  } catch (e) {
+    ccSetStatus(e.message, true);
+    $("cc-go").disabled = false;
+    return;
+  }
   if (!profile || !profile.username) {
     ccSetStatus(`No Chess.com player found for “${raw}”.`, true);
     $("cc-go").disabled = false;
@@ -911,8 +922,8 @@ async function runInsights() {
   }
 
   const [stats, archives] = await Promise.all([
-    ccFetch(`${CC_API}/player/${encodeURIComponent(raw)}/stats`),
-    ccFetch(`${CC_API}/player/${encodeURIComponent(raw)}/games/archives`),
+    ccFetch(`${CC_API}/player/${encodeURIComponent(raw)}/stats`).catch(() => null),
+    ccFetch(`${CC_API}/player/${encodeURIComponent(raw)}/games/archives`).catch(() => null),
   ]);
 
   renderProfile(profile);
@@ -927,7 +938,7 @@ async function runInsights() {
   }
   ccSetStatus(`Loading games from the last ${list.length} month(s)…`);
 
-  const monthly = await Promise.all(list.reverse().map((u) => ccFetch(u)));
+  const monthly = await Promise.all(list.reverse().map((u) => ccFetch(u).catch(() => null)));
   const all = [];
   for (const m of monthly) if (m && Array.isArray(m.games)) all.push(...m.games);
 
