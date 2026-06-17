@@ -16,8 +16,10 @@
     vpn: true,
     proxy: true,
     tor: true,
-    datacenter: false, // hosting/datacenter IPs — flip to true to be stricter
+    datacenter: true, // most commercial VPNs exit through datacenter IPs
   };
+  // Also block if the API's overall risk score is at/above this (0-100).
+  var RISK_SCORE_BLOCK = 75;
   // If the detection API itself fails (offline, blocked, rate-limited):
   //   false = let the visitor in (fail-open, fewer false lockouts)
   //   true  = block until it can be checked (fail-closed, stricter)
@@ -107,7 +109,9 @@
           (BLOCK.vpn && risk.is_vpn) ||
           (BLOCK.proxy && risk.is_proxy) ||
           (BLOCK.tor && risk.is_tor) ||
-          (BLOCK.datacenter && risk.is_datacenter);
+          (BLOCK.datacenter && risk.is_datacenter) ||
+          (typeof risk.risk_score === "number" &&
+            risk.risk_score >= RISK_SCORE_BLOCK);
         flagged ? blockSite() : allow();
       })
       .catch(function () {

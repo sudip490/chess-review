@@ -1,12 +1,12 @@
 /* Simple PWA service worker: makes the app installable + works offline.
    Network-first so updates land immediately, with a cache fallback. */
-const CACHE = "chessreview-v16";
+const CACHE = "chessreview-v17";
 const CORE = [
   "./",
   "./index.html",
   "./styles.css?v=15",
   "./app.js?v=15",
-  "./vpn-guard.js?v=1",
+  "./vpn-guard.js?v=2",
   "./manifest.webmanifest",
   "./assets/icon.svg",
 ];
