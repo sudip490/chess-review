@@ -20,6 +20,11 @@
   };
   // Also block if the API's overall risk score is at/above this (0-100).
   var RISK_SCORE_BLOCK = 75;
+  // Block when the IP's location timezone doesn't match the browser's
+  // timezone. A VPN exit in another country (e.g. a French VPN used from
+  // Nepal) gives an IP timezone like "Europe/Paris" while the browser
+  // still reports "Asia/Kathmandu" — a near-certain VPN signal.
+  var BLOCK_ON_TZ_MISMATCH = true;
   // If the detection API itself fails (offline, blocked, rate-limited):
   //   false = let the visitor in (fail-open, fewer false lockouts)
   //   true  = block until it can be checked (fail-closed, stricter)
@@ -87,6 +92,43 @@
     root.classList.add("vpn-checking");
   }
 
+  // True when the IP's timezone clearly disagrees with the browser's.
+  // Compared by UTC offset (minutes) so equivalent zones don't false-flag;
+  // a >60 min gap means the IP is in a different region than the device.
+  function tzMismatch(ipTz) {
+    if (!ipTz) return false;
+    var browserTz;
+    try {
+      browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch (e) {
+      return false;
+    }
+    if (!browserTz || browserTz === ipTz) return false;
+    function offsetMinutes(tz) {
+      try {
+        // Format a fixed instant in the zone and read back the offset.
+        var dtf = new Intl.DateTimeFormat("en-US", {
+          timeZone: tz,
+          timeZoneName: "shortOffset",
+        });
+        var part = dtf
+          .formatToParts(new Date(0))
+          .find(function (p) {
+            return p.type === "timeZoneName";
+          });
+        var m = part && part.value.match(/GMT([+-]\d{1,2})(?::(\d{2}))?/);
+        if (!m) return null;
+        return parseInt(m[1], 10) * 60 + (m[2] ? parseInt(m[2], 10) : 0);
+      } catch (e) {
+        return null;
+      }
+    }
+    var a = offsetMinutes(browserTz);
+    var b = offsetMinutes(ipTz);
+    if (a == null || b == null) return browserTz !== ipTz; // fall back to name compare
+    return Math.abs(a - b) > 60;
+  }
+
   function check() {
     var done = false;
     var timer = setTimeout(function () {
@@ -105,13 +147,15 @@
         done = true;
         clearTimeout(timer);
         var risk = (data && data.risk) || {};
+        var loc = (data && data.location) || {};
         var flagged =
           (BLOCK.vpn && risk.is_vpn) ||
           (BLOCK.proxy && risk.is_proxy) ||
           (BLOCK.tor && risk.is_tor) ||
           (BLOCK.datacenter && risk.is_datacenter) ||
           (typeof risk.risk_score === "number" &&
-            risk.risk_score >= RISK_SCORE_BLOCK);
+            risk.risk_score >= RISK_SCORE_BLOCK) ||
+          (BLOCK_ON_TZ_MISMATCH && tzMismatch(loc.timezone));
         flagged ? blockSite() : allow();
       })
       .catch(function () {
