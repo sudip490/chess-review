@@ -1,0 +1,9 @@
+{
+  "name": "chess-review",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chess analysis web app with server-side VPN block (Vercel Edge Middleware).",
+  "dependencies": {
+    "@vercel/edge": "^1.2.1"
+  }
+}
